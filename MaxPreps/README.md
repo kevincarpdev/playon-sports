@@ -36,7 +36,7 @@ server needs to be running:
 dotnet run --project src/SportsQa.EvalRunner
 ```
 
-Exits `0` when all 20 goldens pass, non-zero otherwise, so it gates CI.
+Exits `0` when all 24 goldens pass, non-zero otherwise, so it gates CI.
 
 Run the API:
 
@@ -158,11 +158,12 @@ nonexistent table.
 
 | Document | What's in it |
 |---|---|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | **Start here.** Component-by-component overview, request flow, review checklist. |
-| [SEMANTIC_MODEL.md](SEMANTIC_MODEL.md) | The data contract, written as system-prompt context for a real model. Grain, metrics, join paths, and nine sharp edges. |
+| [SUMMARY.md](SUMMARY.md) | **Plain-language overview.** What was built, what I found, what I left out. No code. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | **Start here for the technical detail.** Component-by-component overview, request flow, review checklist. |
+| [SEMANTIC_MODEL.md](SEMANTIC_MODEL.md) | The data contract, written as system-prompt context for a real model. Grain, metrics, join paths, and ten sharp edges. |
 | [FINDINGS.md](FINDINGS.md) | What's wrong with this data and this model, verified with SQL. |
 | [PRODUCTION_NOTES.md](PRODUCTION_NOTES.md) | How this behaves on PlayOn's real data — football, then track & field — plus Postgres and fuzzy search. |
-| [AI_NOTES.md](AI_NOTES.md) | How I used AI, including four places it was wrong and how I caught them. |
+| [AI_NOTES.md](AI_NOTES.md) | How I used AI at three levels, the multi-model review panel, and where AI was wrong. |
 | [PLAN.md](PLAN.md) | The plan written before implementation, after data recon. |
 
 ## How it works, in one paragraph
@@ -171,8 +172,10 @@ The model classifies **intent** and surfaces **entities**; the semantic layer ow
 Five of the 17 recorded model interpretations are broken in five different ways, and three more
 execute cleanly while returning wrong numbers — so validation alone can only reject, never
 repair. Instead, recognised intents run reviewed query templates that handle each documented
-sharp edge once and correctly. Model SQL is the guarded fallback for unrecognised intents,
-validated against the live schema and the caller's role before it runs. Full reasoning in
+sharp edge once and correctly. Model SQL exists as a validated fallback, but note honestly that
+**with the recorded fake client it is unreachable** — unknown intents are refused before
+execution, so an unrecognised question gets a refusal rather than generated SQL. Full reasoning,
+including why that's the honest description rather than the marketing one, in
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Configuration
@@ -196,8 +199,11 @@ src/SportsQa.Api/
   Pipeline/        orchestrator, semantic context provider
   Llm/             ILlmClient and the recorded fake (unmodified)
 
+src/SportsQa.Tests/
+  SqlGuardTests.cs 26 tests on the validation boundary, incl. every known bypass
+
 src/SportsQa.EvalRunner/
-  goldens.json     20 goldens across 15 failure classes, each with its groundTruthSql
+  goldens.json     24 goldens across 16 failure classes, each with its groundTruthSql
 ```
 
 `data/` is unchanged from the original package.

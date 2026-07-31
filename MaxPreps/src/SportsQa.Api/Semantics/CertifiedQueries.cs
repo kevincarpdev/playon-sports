@@ -221,7 +221,12 @@ public sealed class CertifiedQueries(DatasetFacts facts)
             $"Points scored by {school} {sport} {season}.");
     }
 
-    /// <summary>Head-to-head across both orientations — a one-sided join misses half the fixtures.</summary>
+    /// <summary>
+    /// Head-to-head across both orientations — a one-sided join misses half the fixtures.
+    ///
+    /// `winner` is NULL on a draw rather than defaulting to the away side. Four basketball games
+    /// in this dataset are tied, so a two-branch CASE would silently name a loser as the winner.
+    /// </summary>
     public CertifiedQuery HeadToHead(string schoolA, string schoolB, string sport)
     {
         var season = facts.SeasonFor(sport);
@@ -230,7 +235,11 @@ public sealed class CertifiedQueries(DatasetFacts facts)
             """
             SELECT g.game_date, h.school AS home, g.home_score,
                    a.school AS away, g.away_score,
-                   CASE WHEN g.home_score > g.away_score THEN h.school ELSE a.school END AS winner
+                   CASE
+                     WHEN g.home_score > g.away_score THEN h.school
+                     WHEN g.away_score > g.home_score THEN a.school
+                     ELSE NULL
+                   END AS winner
             FROM games g
             JOIN teams h ON h.team_id = g.home_team_id
             JOIN teams a ON a.team_id = g.away_team_id

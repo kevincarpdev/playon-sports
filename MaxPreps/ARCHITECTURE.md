@@ -18,11 +18,41 @@ Concretely, I inverted the usual text-to-SQL trust relationship:
 > The model classifies **intent** and surfaces **entities**.
 > The semantic layer owns the **SQL**.
 
-Free-form model SQL is a guarded fallback for unrecognised intents, never the primary path.
 That inversion is a direct response to evidence: five of the 17 recorded interpretations are
 broken in five different ways, and three more execute cleanly while returning wrong numbers
 (FINDINGS §2). Reported confidence on the broken ones ranges 0.88–0.95, so **the model's own
 confidence cannot be the gate**.
+
+### Read this before the rest: the model-SQL fallback is unreachable as configured
+
+Stated plainly because an earlier version of this document oversold it.
+
+`SqlGuard` and the fallback branch in `QuestionPipeline.ExecuteAsync` exist and are correct, but
+**with the recorded fake client they never execute.** The chain: `FakeLlmClient` returns
+`intent: "unknown", sql: null` for anything outside the 17 questions → `IntentCatalog.For` maps
+an unknown intent to a permanent refusal *before* execution → and all 17 recognised intents have
+a certified template. So `query is null` is never true for any input the harness can produce.
+
+What that means honestly:
+
+- **On a question with no template, the system refuses.** That is the whole behaviour. Every
+  quality property below — stale-rollup bypass, tie sets, season scoping, direction-aware
+  ranking, both-orientation joins — is a closed-world property of 17 questions. The system
+  generalises to *phrasings*, not to *questions*.
+- **No golden asserts `sqlSource: Model`,** so the eval suite would not notice if that path
+  broke.
+- The guard is still load-bearing: every certified template passes through it, which is where
+  the per-role table allow-list is enforced. It is not decoration — it is just not currently
+  validating *model* SQL.
+
+In production the split would be real: reviewed templates for high-traffic intents, guarded
+generation for the tail. Here it is architecture with one arm immobilised, and that is the
+honest description.
+
+There *was* one reachable seam into the fallback — an unrecognised caller-supplied slot value
+missed every template and fell through to the model's SQL, returning a cross-sport tie-blind
+answer with outcome `Answered`. Found by adversarial review, closed, and now pinned by three
+goldens under `untrusted-slot-input`.
 
 Every response reports where its SQL came from (`sqlSource`) and, when we discarded the
 model's version, why (`modelSqlRejectedBecause`).
@@ -84,7 +114,7 @@ The tier boundary is real and tested: `Anonymous` asking Tony Jackson's touchdow
 `table_not_permitted`; the same question as `Subscriber` answers 15. Two goldens pin both
 sides.
 
-### `Routing/CapabilityRouter.cs` — cost control, not security
+### `Routing/CapabilityRouter.cs` — cost control, and honestly the weakest component
 Scores the question, picks a tier (`Lookup` / `Aggregate` / `Deep`), and returns capabilities
 plus a row budget. The effective grant is `TierGrant ∩ RoleGrant` — least privilege.
 
@@ -97,6 +127,18 @@ refused. Word count is a bad proxy. Now the tier is a **prior** and the resolved
 The separation that makes this safe: **tier moves cost controls; role governs data access.**
 `Capabilities.IsSecurityBoundary` marks the one capability (`OpsIntents`) that escalation may
 never grant.
+
+**What it actually does, measured rather than described.** A review established that `Deep`
+grants capabilities identical to `Aggregate`; `MaxRows` comes from the role grant and the tier
+never touches it; and because `EscalateFor` raises any decision to `Aggregate`, the
+`capability_not_granted` refusal in the pipeline is **unreachable**. The observable output of
+tier classification is therefore a string in the diagnostics payload.
+
+Deleting it, folding `AllowOpsIntents` into the role grant, would cost nothing and no golden
+would notice. It is kept for one honest reason — the role-grant intersection it performs *is*
+load-bearing, and the seam is where model-tier routing lands in production — but the tier
+classifier itself is scale signalling, not work. If this were shipping I would collapse it to
+`RoleGrant` plus an ops flag.
 
 ### `Data/SchemaCatalog.cs` — live schema + entity lexicon
 Read once at startup, never per request. Two jobs:

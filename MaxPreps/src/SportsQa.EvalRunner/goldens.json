@@ -12,7 +12,11 @@
       "id": "team-count",
       "failureClass": "baseline",
       "question": "How many teams are in the database?",
-      "expect": { "outcome": "Answered", "column": "team_count", "value": 16 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "team_count",
+        "value": 16
+      },
       "groundTruthSql": "SELECT COUNT(*) FROM teams;",
       "rationale": "Sanity check that the happy path works. Note teams is one row per school per sport, so 16 teams across 10 schools."
     },
@@ -20,7 +24,11 @@
       "id": "foss-passing-yards",
       "failureClass": "model-is-correct",
       "question": "What is Derek Foss's total passing yards?",
-      "expect": { "outcome": "Answered", "column": "passing_yards", "value": 2047 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "passing_yards",
+        "value": 2047
+      },
       "groundTruthSql": "SELECT SUM(pass_yds) FROM player_game_stats WHERE player_id = 37;",
       "rationale": "The model's SQL is right here. Proves the validation layer does not over-block correct work."
     },
@@ -28,7 +36,11 @@
       "id": "oak-hill-roster",
       "failureClass": "grain",
       "question": "How many players are on the Oak Hill football roster?",
-      "expect": { "outcome": "Answered", "column": "player_count", "value": 12 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "player_count",
+        "value": 12
+      },
       "groundTruthSql": "SELECT COUNT(*) FROM players p JOIN teams t ON t.team_id = p.team_id WHERE t.school = 'Oak Hill' AND t.sport = 'Football';",
       "rationale": "Roster count must include the 4 positions that have no stat rows. Counting distinct players in player_game_stats would give the wrong answer."
     },
@@ -36,7 +48,11 @@
       "id": "jackson-prep-wins",
       "failureClass": "join-correctness",
       "question": "How many games did Jackson Prep win in the 2025 football season?",
-      "expect": { "outcome": "Answered", "column": "wins", "value": 3 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "wins",
+        "value": 3
+      },
       "groundTruthSql": "SELECT SUM(CASE WHEN (home_team_id=1 AND home_score>away_score) OR (away_team_id=1 AND away_score>home_score) THEN 1 ELSE 0 END) FROM games WHERE 1 IN (home_team_id, away_team_id);",
       "rationale": "Jackson Prep football played 8 games and won 3. Requires checking both home and away orientations."
     },
@@ -44,7 +60,11 @@
       "id": "tony-jackson-touchdowns",
       "failureClass": "model-hallucinated-column",
       "question": "How many touchdowns did Tony Jackson score this season?",
-      "expect": { "outcome": "Answered", "column": "touchdowns", "value": 15 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "touchdowns",
+        "value": 15
+      },
       "groundTruthSql": "SELECT SUM(td) FROM player_game_stats WHERE player_id = 14;",
       "rationale": "The model emits SUM(s.touchdowns); the column is td. Must answer 15 rather than surfacing a SQLite error."
     },
@@ -52,7 +72,11 @@
       "id": "marcus-bell-points",
       "failureClass": "stale-rollup",
       "question": "How many total points has Marcus Bell scored this season?",
-      "expect": { "outcome": "Answered", "column": "points", "value": 232 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "points",
+        "value": 232
+      },
       "groundTruthSql": "SELECT SUM(s.points) FROM player_game_stats s JOIN games g ON g.game_id = s.game_id WHERE s.player_id = 113;",
       "rationale": "player_season_totals says 165 across 7 games; the fact table says 232 across 9. The rollup's updated_at is 2026-02-10 but the season ran to 2026-02-24. A regression to 165 must fail this golden."
     },
@@ -60,7 +84,12 @@
       "id": "marcus-bell-ppg",
       "failureClass": "stale-rollup",
       "question": "What was Marcus Bell's average points per game this season?",
-      "expect": { "outcome": "Answered", "column": "points_per_game", "value": 25.777777777777779, "tolerance": 0.01 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "points_per_game",
+        "value": 25.77777777777778,
+        "tolerance": 0.01
+      },
       "groundTruthSql": "SELECT SUM(s.points)*1.0/COUNT(DISTINCT s.game_id) FROM player_game_stats s JOIN games g ON g.game_id = s.game_id WHERE s.player_id = 113;",
       "rationale": "232/9 = 25.78. The rollup would give 165/7 = 23.57. Also guards against integer division."
     },
@@ -68,7 +97,11 @@
       "id": "top-basketball-scorer",
       "failureClass": "ranking",
       "question": "Who scored the most points in basketball during the 2025-26 season?",
-      "expect": { "outcome": "Answered", "column": "player", "value": "Marcus Bell" },
+      "expect": {
+        "outcome": "Answered",
+        "column": "player",
+        "value": "Marcus Bell"
+      },
       "groundTruthSql": "SELECT p.first_name||' '||p.last_name, SUM(s.points) FROM player_game_stats s JOIN games g ON g.game_id=s.game_id JOIN players p ON p.player_id=s.player_id WHERE g.sport='Basketball' GROUP BY s.player_id ORDER BY 2 DESC LIMIT 1;",
       "rationale": "Marcus Bell leads with 232 despite playing only 9 games. Correct only when computed from the fact table."
     },
@@ -76,15 +109,27 @@
       "id": "most-rebounds-tie",
       "failureClass": "unreported-tie",
       "question": "Who had the most rebounds in a single game?",
-      "expect": { "outcome": "Answered", "column": "value", "value": 12, "isTie": true, "hasCaveat": "tied_result" },
-      "groundTruthSql": "SELECT COUNT(*) FROM player_game_stats WHERE rebounds = (SELECT MAX(rebounds) FROM player_game_stats);",
-      "rationale": "Twelve stat lines tie at 12 rebounds. The model's ORDER BY ... LIMIT 1 returns one arbitrary name and presents it as fact. Must report the tie."
+      "expect": {
+        "outcome": "Answered",
+        "column": "value",
+        "value": 12,
+        "isTie": true,
+        "hasCaveat": "tied_result"
+      },
+      "groundTruthSql": "SELECT MAX(rebounds) AS value FROM player_game_stats; -- tie size: SELECT COUNT(*) FROM player_game_stats WHERE rebounds = 12; => 52",
+      "rationale": "12 is the maximum and 52 stat lines across 34 players share it, because the column is clipped at 12. The model's ORDER BY ... LIMIT 1 returns one arbitrary name as fact."
     },
     {
       "id": "highest-scoring-football-game-tie",
       "failureClass": "unreported-tie",
       "question": "What was the highest scoring football game?",
-      "expect": { "outcome": "Answered", "column": "total_points", "value": 73, "isTie": true, "hasCaveat": "tied_result" },
+      "expect": {
+        "outcome": "Answered",
+        "column": "total_points",
+        "value": 73,
+        "isTie": true,
+        "hasCaveat": "tied_result"
+      },
       "groundTruthSql": "SELECT home_score+away_score t FROM games WHERE sport='Football' ORDER BY t DESC LIMIT 3;",
       "rationale": "Two games tie at 73: Central Valley 38-35 Lakewood and Riverside 35-38 Lakewood. The model returns one, with no team names at all."
     },
@@ -92,7 +137,10 @@
       "id": "riverside-injuries",
       "failureClass": "nonexistent-table",
       "question": "How many injuries were reported for Riverside this season?",
-      "expect": { "outcome": "CannotAnswer", "refusalCode": "not_in_dataset" },
+      "expect": {
+        "outcome": "CannotAnswer",
+        "refusalCode": "not_in_dataset"
+      },
       "groundTruthSql": "SELECT name FROM sqlite_master WHERE type='table' AND name='injuries';",
       "rationale": "There is no injuries table. The model still emits SQL against one at confidence 0.88, which is why model confidence cannot be the gate."
     },
@@ -100,7 +148,13 @@
       "id": "best-player-subjective",
       "failureClass": "subjective",
       "question": "Who is the best player?",
-      "expect": { "outcome": "NeedsClarification", "clarificationSlots": ["metric", "sport"] },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "metric",
+          "sport"
+        ]
+      },
       "groundTruthSql": null,
       "rationale": "No defensible default. The model asserts best = most total points, which both mixes sports and rewards players on 14-game schedules."
     },
@@ -108,7 +162,12 @@
       "id": "riverside-oak-hill-ambiguous",
       "failureClass": "sport-ambiguity",
       "question": "Did Riverside beat Oak Hill this season?",
-      "expect": { "outcome": "NeedsClarification", "clarificationSlots": ["sport"] },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "sport"
+        ]
+      },
       "groundTruthSql": "SELECT g.sport, h.school, g.home_score, a.school, g.away_score FROM games g JOIN teams h ON h.team_id=g.home_team_id JOIN teams a ON a.team_id=g.away_team_id WHERE (h.school='Riverside' AND a.school='Oak Hill') OR (h.school='Oak Hill' AND a.school='Riverside');",
       "rationale": "Opposite answers by sport, so a bare yes/no is wrong half the time. The model's SQL also has an unbalanced quote and only checks Riverside as home."
     },
@@ -116,8 +175,15 @@
       "id": "riverside-oak-hill-football",
       "failureClass": "clarification-loop-closes",
       "question": "Did Riverside beat Oak Hill this season?",
-      "slots": { "sport": "Football" },
-      "expect": { "outcome": "Answered", "column": "winner", "value": "Oak Hill", "rowCount": 1 },
+      "slots": {
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "column": "winner",
+        "value": "Oak Hill",
+        "rowCount": 1
+      },
       "groundTruthSql": "SELECT h.school, g.home_score, a.school, g.away_score FROM games g JOIN teams h ON h.team_id=g.home_team_id JOIN teams a ON a.team_id=g.away_team_id WHERE g.sport='Football' AND ((h.school='Riverside' AND a.school='Oak Hill') OR (h.school='Oak Hill' AND a.school='Riverside'));",
       "rationale": "Proves the slot layer is load-bearing, not decorative. In football Oak Hill won 24-21, so Riverside did NOT beat them - the opposite of the basketball answer."
     },
@@ -125,16 +191,29 @@
       "id": "riverside-oak-hill-basketball",
       "failureClass": "clarification-loop-closes",
       "question": "Did Riverside beat Oak Hill this season?",
-      "slots": { "sport": "Basketball" },
-      "expect": { "outcome": "Answered", "column": "winner", "value": "Riverside", "rowCount": 2 },
-      "groundTruthSql": "SELECT COUNT(*) FROM games g JOIN teams h ON h.team_id=g.home_team_id JOIN teams a ON a.team_id=g.away_team_id WHERE g.sport='Basketball' AND ((h.school='Riverside' AND a.school='Oak Hill') OR (h.school='Oak Hill' AND a.school='Riverside'));",
+      "slots": {
+        "sport": "Basketball"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "column": "winner",
+        "value": "Riverside",
+        "rowCount": 2
+      },
+      "groundTruthSql": "SELECT g.game_date, CASE WHEN g.home_score > g.away_score THEN h.school WHEN g.away_score > g.home_score THEN a.school ELSE NULL END AS winner FROM games g JOIN teams h ON h.team_id=g.home_team_id JOIN teams a ON a.team_id=g.away_team_id WHERE g.sport='Basketball' AND ((h.school='Riverside' AND a.school='Oak Hill') OR (h.school='Oak Hill' AND a.school='Riverside')) ORDER BY g.game_date;",
       "rationale": "The same question, other sport: Riverside won both meetings (100-89 and 79-72). Both rows must come back, including the one where Riverside was away."
     },
     {
       "id": "jackson-entity-ambiguous",
       "failureClass": "entity-ambiguity",
       "question": "How many points did Jackson score this season?",
-      "expect": { "outcome": "NeedsClarification", "clarificationSlots": ["entity", "sport"] },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "entity",
+          "sport"
+        ]
+      },
       "groundTruthSql": "SELECT 'school', school FROM teams WHERE school LIKE '%Jackson%' UNION ALL SELECT 'city', city FROM teams WHERE city LIKE '%Jackson%' UNION ALL SELECT 'player', last_name FROM players WHERE last_name LIKE '%Jackson%';",
       "rationale": "Jackson is a school, a city and a player surname. The model silently picked the football team."
     },
@@ -142,8 +221,15 @@
       "id": "jackson-prep-points-resolved",
       "failureClass": "clarification-loop-closes",
       "question": "How many points did Jackson score this season?",
-      "slots": { "entity": "Jackson Prep", "sport": "Football" },
-      "expect": { "outcome": "Answered", "column": "points_for", "value": 139 },
+      "slots": {
+        "entity": "Jackson Prep",
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "column": "points_for",
+        "value": 139
+      },
       "groundTruthSql": "SELECT SUM(CASE WHEN home_team_id=1 THEN home_score ELSE away_score END) FROM games WHERE 1 IN (home_team_id, away_team_id);",
       "rationale": "Once the entity is pinned the answer is definite: Jackson Prep football scored 139 points across 8 games."
     },
@@ -151,7 +237,10 @@
       "id": "unsupported-question",
       "failureClass": "out-of-scope",
       "question": "Who won the state championship?",
-      "expect": { "outcome": "CannotAnswer", "refusalCode": "unsupported_question" },
+      "expect": {
+        "outcome": "CannotAnswer",
+        "refusalCode": "unsupported_question"
+      },
       "groundTruthSql": null,
       "rationale": "No playoff or championship structure exists. Must refuse rather than substitute a proxy such as most wins."
     },
@@ -160,7 +249,10 @@
       "failureClass": "authorization",
       "question": "How many touchdowns did Tony Jackson score this season?",
       "role": "Anonymous",
-      "expect": { "outcome": "CannotAnswer", "refusalCode": "table_not_permitted" },
+      "expect": {
+        "outcome": "CannotAnswer",
+        "refusalCode": "table_not_permitted"
+      },
       "groundTruthSql": null,
       "rationale": "Per-game stat lines are a paid surface. The same question answers 15 for a Subscriber, so this golden pins the authorization boundary rather than the data."
     },
@@ -169,9 +261,79 @@
       "failureClass": "authorization",
       "question": "How many teams are in the database?",
       "role": "Anonymous",
-      "expect": { "outcome": "Answered", "column": "team_count", "value": 16 },
+      "expect": {
+        "outcome": "Answered",
+        "column": "team_count",
+        "value": 16
+      },
       "groundTruthSql": "SELECT COUNT(*) FROM teams;",
       "rationale": "Team-level facts stay public. Guards against the role grant being accidentally over-tightened."
+    },
+    {
+      "id": "rejects-unknown-metric-slot",
+      "failureClass": "untrusted-slot-input",
+      "question": "Who is the best player?",
+      "slots": {
+        "metric": "swagger",
+        "sport": "Basketball"
+      },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "metric"
+        ]
+      },
+      "groundTruthSql": null,
+      "rationale": "An adversarial review found this reachable: an unrecognised slot value satisfied slot-completeness, missed every certified template, and fell through to the model's own cross-sport tie-blind SQL, returning outcome Answered. Slot values are caller input and must be checked against their closed domain."
+    },
+    {
+      "id": "rejects-unknown-sport-slot",
+      "failureClass": "untrusted-slot-input",
+      "question": "Did Riverside beat Oak Hill this season?",
+      "slots": {
+        "sport": "Curling"
+      },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "sport"
+        ]
+      },
+      "groundTruthSql": "SELECT DISTINCT sport FROM games;",
+      "rationale": "Only Football and Basketball exist. A sport the dataset has never seen must re-ask rather than scope a query to nothing."
+    },
+    {
+      "id": "rejects-unknown-entity-slot",
+      "failureClass": "untrusted-slot-input",
+      "question": "How many points did Jackson score this season?",
+      "slots": {
+        "entity": "Nowhere High",
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "entity"
+        ]
+      },
+      "groundTruthSql": "SELECT DISTINCT school FROM teams ORDER BY school;",
+      "rationale": "A school not in the data would return zero rows and read as a real answer of nothing. Entity slots are validated against the lexicon."
+    },
+    {
+      "id": "best-player-resolved-by-rate",
+      "failureClass": "clarification-loop-closes",
+      "question": "Who is the best player?",
+      "slots": {
+        "metric": "points_per_game",
+        "sport": "Basketball"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "column": "player",
+        "value": "Marcus Bell"
+      },
+      "groundTruthSql": "SELECT p.first_name||' '||p.last_name, SUM(s.points)*1.0/COUNT(DISTINCT s.game_id) ppg FROM player_game_stats s JOIN games g ON g.game_id=s.game_id JOIN players p ON p.player_id=s.player_id WHERE g.sport='Basketball' GROUP BY s.player_id ORDER BY ppg DESC LIMIT 3;",
+      "rationale": "Proves the subjective question becomes answerable once a metric is supplied, and that a valid slot still works after the validation added above. Bell leads on rate (25.78) as well as total despite playing 9 games to Quigley's 14."
     }
   ]
 }

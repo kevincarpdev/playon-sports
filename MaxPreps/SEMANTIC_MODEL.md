@@ -6,7 +6,8 @@ what the data means. Read the **Hard Rules** and **Sharp Edges** before writing 
 most wrong answers over this dataset come from violating something in those two sections,
 not from bad SQL syntax.
 
-Every fact below was verified against the data.
+Every fact below is verified against the data by query. Where a claim was found wrong during
+review it has been corrected, not softened — see §3 on ties and §5 on reconciliation.
 
 ---
 
@@ -31,8 +32,13 @@ position. If a question needs any of those, **refuse** — do not substitute a p
 
 ## 2. Hard Rules
 
-1. **Read-only.** Emit exactly one `SELECT`. Never `INSERT`/`UPDATE`/`DELETE`/`DROP`/
-   `ATTACH`/`PRAGMA`. Never multiple statements.
+0. **You have three possible outputs, not one.** A single `SELECT`; a request for
+   clarification naming the missing fact; or a refusal naming what is absent. Rules about SQL
+   below apply only when you choose to emit SQL — they never oblige you to guess. §7 and §8 say
+   which output to pick.
+1. **Read-only.** When you emit SQL, emit exactly one `SELECT`. Never `INSERT`/`UPDATE`/
+   `DELETE`/`DROP`/`ATTACH`/`PRAGMA`. Never multiple statements. No common table expressions —
+   use a subquery.
 2. **`teams` is one row per school *per sport*.** Always constrain `sport` when you join
    `teams`, or you will silently match a school's other team.
 3. **"This season" is ambiguous** — two seasons coexist. Never guess. Ask, or scope by sport.
@@ -45,6 +51,9 @@ position. If a question needs any of those, **refuse** — do not substitute a p
    the last `ORDER BY` term so results are stable and cacheable.
 8. **Absence of a stat row is not zero.** 40 players are never tracked. See §6.5.
 9. **The column is `td`, not `touchdowns`.** There is no `touchdowns` column anywhere.
+10. **A game can be drawn.** Four basketball games are tied, so a win is not simply "scored
+    more". See §6.10.
+11. **`SUM` over no rows is `NULL`, not `0`.** See §6.5 — this is how "untracked" surfaces.
 
 ---
 
@@ -75,8 +84,11 @@ but **do not rely on names being unique**; a real dataset has many. Positions:
 `away_team_id` → `teams` · `home_score` · `away_score`
 
 Scores are final. No ongoing or scheduled-future games; no forfeits or overtime flags.
-No ties exist in either sport's results. `game_date` is `YYYY-MM-DD` text — safe to compare
-lexically or with `date()`.
+`game_date` is `YYYY-MM-DD` text — safe to compare lexically or with `date()`.
+
+⚠️ **Ties exist.** Four basketball games ended level: 96–96 (2025-12-05), 100–100 (2025-12-12),
+83–83 (2026-02-10), 83–83 (2026-02-24). Any win/loss logic must handle `home_score =
+away_score` as a third outcome, not fold it into a loss. See §6.10.
 
 A game appears **once**, not once per team. To get a team's games you must check both
 `home_team_id` and `away_team_id`.
@@ -151,10 +163,16 @@ Use these definitions verbatim. Do not invent variants.
 | Team points for | `SUM` of that team's own side of the score |
 | Highest-scoring game | `home_score + away_score` |
 
-**Reconciliation guarantee (verified):** summed player `points` equals the team's score in
-**all 136 team-games**, both sports. So `player_game_stats` is a complete and trustworthy
-record of *scoring*, even though 40 non-scoring players are untracked. You may use it to
-attribute team scoring without fear of double-counting.
+**Reconciliation (verified, with one exception):** there are **138 team-sides** across 69
+games. **136** have stat lines, and in all 136 the summed player `points` equals that team's
+score exactly — no double-counting, despite 40 untracked players.
+
+The exception is **game 69** (Football, 7–14): it has final scores and **zero** stat rows for
+either team. So player-level sums cannot reconstruct that game at all.
+
+Practical rule: you may attribute team scoring from `player_game_stats` where stat lines exist,
+but never assume they exist. A team total derived from player rows will silently under-report
+for game 69, and `SUM` over an empty set returns `NULL`, not `0`.
 
 Football `points` is derived: `td * 6` for `QB`/`RB`/`WR`, and independent kicking points
 (0–8, with `td = 0`) for `K`. It therefore excludes 2-point conversions and safeties as
@@ -189,8 +207,19 @@ Consequences: Marcus Bell's PPG is **23.57** from the rollup and **25.78** from 
 His season points are **165** or **232**. The rollup is not merely imprecise — it is missing
 whole games.
 
+**`updated_at` is not a correctness signal.** Marcus Bell's rollup says `2026-02-10`, which is
+*after* his own last game (`2026-02-06`) — and it is still wrong (165/7 against 232/9). A
+timestamp that post-dates a player's final game tells you nothing about whether their rows were
+counted. Do not treat a recent `updated_at` as permission to trust the rollup.
+
+Note also that the rollup inherits the orphan-row problem (§6.4): Silas York's rollup says 43,
+which matches the games-joined sum, not the raw 55. So "rollup versus fact table" is itself
+ambiguous until you fix a join policy.
+
 **Rule: compute from `player_game_stats`.** Use the rollup only when the question explicitly
-asks about the rollup, and when you do, report `updated_at`. Detect staleness with:
+asks about the rollup, and when you do, report `updated_at` *and* that it is unverified. The
+query below finds rows stale relative to the season's last game — a useful floor, but it will
+miss a row whose `updated_at` merely post-dates the player's own last appearance:
 
 ```sql
 SELECT pst.player_id, pst.points, pst.games_played, pst.updated_at
@@ -205,7 +234,7 @@ WHERE date(pst.updated_at) < date(lg.last_game);
 Verified ties in this data:
 
 - **Most rebounds in a single game** — **52 stat lines across 34 players tie at 12**, which
-  is the column's ceiling. See §6.9: this question has no meaningful single answer.
+  is the column's ceiling. See §6.8: this question has no meaningful single answer.
 - **Highest-scoring football game** — **two games tied at 73**: Central Valley 38–35
   Lakewood (2025-10-03) and Riverside 35–38 Lakewood (2025-10-17).
 - **Top-5 scorer lists** — ranks 4 and 5 are both **211**, so a `LIMIT 5` cut is arbitrary.
@@ -247,6 +276,29 @@ A question like "how many touchdowns did our left tackle score" must be answered
 "not tracked", **not** "zero". And `COUNT(*)` over `players` (roster) is a different
 question from `COUNT(DISTINCT player_id)` over `player_game_stats` (tracked players).
 
+### 6.5b Two different kinds of nothing
+
+These look identical in a result set and mean different things:
+
+| | What you see | What it means |
+|---|---|---|
+| **No row** | `SUM(...)` returns `NULL` | Player is not tracked at all (§6.5), or played no games |
+| **NULL column on a real row** | `SUM(...)` returns `NULL` | Player *is* tracked, but that stat does not apply to their position |
+
+`SUM(pass_yds)` for a running back returns `NULL` — not `0` — because RB rows populate
+`rush_yds` and leave `pass_yds` NULL. Same for asking a football player about `rebounds`.
+
+Within a sport, the columns that *do* apply are never NULL: basketball rows always carry
+`points`, `rebounds` and `assists` (zeros exist, NULLs do not), and football rows always carry
+`points` and `td`.
+
+So a NULL result never means zero. It means either "not tracked" or "not applicable to this
+position", and you should say which. Use `COALESCE` only when you have established that the
+player is tracked *and* the stat applies.
+
+Also note the rollup carries **only `points`** — there is no path to touchdowns, yards,
+rebounds or assists through `player_season_totals`.
+
 ### 6.6 Schedules are uneven, so totals and averages are not comparable
 
 Games played per team ranges **8 to 14** in basketball (Westbrook 8, Jackson Prep 14,
@@ -263,7 +315,7 @@ distinct season strings hide the problem today. It will break the first time one
 rows for two sports in the same season string. Do not build logic that assumes the rollup
 can hold both.
 
-### 6.9 `rebounds` and `assists` are clipped; `points` is not
+### 6.8 `rebounds` and `assists` are clipped; `points` is not
 
 `rebounds` never exceeds **12** and `assists` never exceed **9**, and both pile up at that
 ceiling rather than tapering: 52 rows at 12 rebounds versus 40 at 11 and 51 at 10. By
@@ -276,7 +328,7 @@ That pattern means the two columns are capped or bucketed upstream, not merely s
 - Ranking or comparing players by these columns is unsafe near the top of the range.
 - `points` is safe to rank on; treat it as the only reliable per-game scoring measure.
 
-### 6.8 Do not hardcode "two sports"
+### 6.9 Do not hardcode "two sports"
 
 `HAVING COUNT(DISTINCT sport) = 2` is a common way to find schools in both sports. It is
 wrong the moment a third sport is added. Name the sports explicitly instead:
@@ -288,6 +340,19 @@ GROUP BY school
 HAVING COUNT(DISTINCT sport) = 2
 ORDER BY school;
 ```
+
+### 6.10 A game can be drawn, so a win is not "scored more"
+
+Four basketball games are tied (§3). Consequences:
+
+- `home_score > away_score` counts wins correctly but **silently drops draws** from any
+  win/loss/total accounting. If you report a record, report ties as their own number.
+- A two-branch `CASE WHEN home > away THEN home ELSE away END AS winner` is **wrong on a draw**
+  — it names the away team as winner. Use three branches and return `NULL` for a tie.
+- "Did X beat Y" has three possible answers, not two.
+
+No football game is drawn in this data, so football win logic is currently safe by accident.
+Do not rely on that.
 
 ---
 
@@ -375,17 +440,22 @@ you can produce, because it looks like an answer.
 Correct shapes for the common question types.
 
 ```sql
--- Top basketball scorers: scoped to sport AND season, tie-aware, deterministic
-SELECT p.first_name || ' ' || p.last_name AS player,
-       SUM(s.points) AS total_points,
-       COUNT(DISTINCT s.game_id) AS games_played
-FROM player_game_stats s
-JOIN games   g ON g.game_id   = s.game_id
-JOIN players p ON p.player_id = s.player_id
-WHERE g.sport = 'Basketball' AND g.season = '2025-26'
-GROUP BY s.player_id
-ORDER BY total_points DESC, s.player_id
-LIMIT 5;
+-- Top basketball scorers. Ranks 4 and 5 are both 211, so a plain LIMIT 5 would cut a tie
+-- arbitrarily; DENSE_RANK returns every player at or above rank 5 instead.
+SELECT player, total_points, games_played FROM (
+  SELECT p.first_name || ' ' || p.last_name AS player,
+         SUM(s.points) AS total_points,
+         COUNT(DISTINCT s.game_id) AS games_played,
+         DENSE_RANK() OVER (ORDER BY SUM(s.points) DESC) AS rnk,
+         s.player_id
+  FROM player_game_stats s
+  JOIN games   g ON g.game_id   = s.game_id
+  JOIN players p ON p.player_id = s.player_id
+  WHERE g.sport = 'Basketball' AND g.season = '2025-26'
+  GROUP BY s.player_id
+)
+WHERE rnk <= 5
+ORDER BY total_points DESC, player_id;
 ```
 
 ```sql

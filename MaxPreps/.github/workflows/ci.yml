@@ -23,6 +23,11 @@ jobs:
       - name: Build
         run: dotnet build src --configuration Release --nologo
 
+      # Direct tests on the validation boundary, including every bypass an adversarial review
+      # found. These are the regressions most likely to be reintroduced by a well-meaning edit.
+      - name: Unit tests
+        run: dotnet test src/SportsQa.Tests --configuration Release --nologo
+
       # The real gate. Expected values come from independent SQL, so a regression in answer
       # correctness fails the build here rather than reaching a user.
       - name: Run goldens
