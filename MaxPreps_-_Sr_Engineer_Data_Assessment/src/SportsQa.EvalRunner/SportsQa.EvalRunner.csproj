@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SportsQa.Api\SportsQa.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="goldens.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="goldens.example.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

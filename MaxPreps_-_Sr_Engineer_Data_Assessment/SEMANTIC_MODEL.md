@@ -204,7 +204,8 @@ WHERE date(pst.updated_at) < date(lg.last_game);
 
 Verified ties in this data:
 
-- **Most rebounds in a single game** — at least **5 players tied at 12**.
+- **Most rebounds in a single game** — **52 stat lines across 34 players tie at 12**, which
+  is the column's ceiling. See §6.9: this question has no meaningful single answer.
 - **Highest-scoring football game** — **two games tied at 73**: Central Valley 38–35
   Lakewood (2025-10-03) and Riverside 35–38 Lakewood (2025-10-17).
 - **Top-5 scorer lists** — ranks 4 and 5 are both **211**, so a `LIMIT 5` cut is arbitrary.
@@ -261,6 +262,19 @@ The primary key is `(player_id, season)` with `sport` as a non-key column. Two s
 distinct season strings hide the problem today. It will break the first time one athlete has
 rows for two sports in the same season string. Do not build logic that assumes the rollup
 can hold both.
+
+### 6.9 `rebounds` and `assists` are clipped; `points` is not
+
+`rebounds` never exceeds **12** and `assists` never exceed **9**, and both pile up at that
+ceiling rather than tapering: 52 rows at 12 rebounds versus 40 at 11 and 51 at 10. By
+contrast `points` has a natural tail — a single row at 35, one at 32, one at 30.
+
+That pattern means the two columns are capped or bucketed upstream, not merely small. So:
+
+- "Most rebounds in a single game" and "most assists in a single game" are **not answerable
+  as superlatives** — dozens of players share the ceiling. Report the tie, or decline.
+- Ranking or comparing players by these columns is unsafe near the top of the range.
+- `points` is safe to rank on; treat it as the only reliable per-game scoring measure.
 
 ### 6.8 Do not hardcode "two sports"
 

@@ -203,7 +203,7 @@ designed and left as interfaces:
 
 `LIMIT 1` on a tied ranking returns an arbitrary row and presents it as fact.
 
-- **Most rebounds in a single game** — at least **5 players tied at 12**.
+- **Most rebounds in a single game** — **52 stat lines / 34 players tie at 12**, the column's clipped ceiling.
 - **Highest-scoring football game** — **two games tied at 73** (Central Valley 38–35
   Lakewood; Riverside 35–38 Lakewood).
 - Any `LIMIT 5` list can split a tie at the boundary (rank 4/5 are both 211).
@@ -303,7 +303,7 @@ Expected values come from my own queries above, never from the model.
 | 9 | `best-player` | `needs_clarification` | Subjective — must ask for a metric |
 | 10 | `riverside-beat-oak-hill` | `needs_clarification` | Sport ambiguity + broken SQL |
 | 11 | `jackson-points` | `needs_clarification` | Entity ambiguity across 3 candidates |
-| 12 | `most-rebounds-single-game` | tie of 5 at 12 | Ties reported, not one arbitrary name |
+| 12 | `most-rebounds-single-game` | tie at 12 | Ties reported, not one arbitrary name |
 | 13 | `riverside-beat-oak-hill` + `sport=Football` | **no** (24–21 loss) | Clarification loop closes |
 
 Golden 13 is the one that proves the slot layer is real rather than decorative: the same
