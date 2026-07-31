@@ -69,12 +69,15 @@ no review, because they read as authoritative.
 
 ### AI in the pipeline
 
-`.github/workflows/ci.yml` runs three gates on every PR, all offline:
+`.github/workflows/ci.yml` runs six gates on every PR, all offline:
 
 1. Build clean.
-2. The 20 goldens pass — a regression in *answer correctness* fails the merge.
-3. A deliberately corrupted golden must fail. This guards the guard: a suite that cannot go red
+2. The 26 unit tests pass, including every `SqlGuard` bypass an adversarial review found.
+3. The 24 goldens pass — a regression in *answer correctness* fails the merge.
+4. A deliberately corrupted golden must fail. This guards the guard: a suite that cannot go red
    gates nothing, and that degradation is silent.
+5. The API starts and reports healthy.
+6. `smoke.sh` passes — every outcome, status code and authorization boundary over real HTTP.
 
 The AI reviewer job is optional and skipped without a key, because the graded path must run
 without one. It is also deliberately narrow: not "review this PR", but *does this diff change

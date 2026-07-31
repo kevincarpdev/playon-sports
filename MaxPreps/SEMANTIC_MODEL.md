@@ -276,7 +276,7 @@ A question like "how many touchdowns did our left tackle score" must be answered
 "not tracked", **not** "zero". And `COUNT(*)` over `players` (roster) is a different
 question from `COUNT(DISTINCT player_id)` over `player_game_stats` (tracked players).
 
-### 6.5b Two different kinds of nothing
+### 6.5.1 Two different kinds of nothing
 
 These look identical in a result set and mean different things:
 

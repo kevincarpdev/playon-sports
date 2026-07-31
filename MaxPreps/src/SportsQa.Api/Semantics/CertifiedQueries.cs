@@ -22,7 +22,10 @@ public sealed record CertifiedQuery(
 /// bypassed for the fact table, superlatives rank instead of `LIMIT 1`, and head-to-head
 /// matches both home and away orientations.
 ///
-/// Values arrive as parameters, never interpolated.
+/// Caller-supplied values arrive as parameters and are never interpolated. The only
+/// interpolated fragments are `Metric.Expression` and fixed column names, both drawn from
+/// closed sets declared in Slots.cs. That invariant lives in a comment rather than a type,
+/// which FINDINGS.md §5 records as a known limitation.
 /// </summary>
 public sealed class CertifiedQueries(DatasetFacts facts)
 {
@@ -97,7 +100,7 @@ public sealed class CertifiedQueries(DatasetFacts facts)
     /// <summary>
     /// Single-game maximum, returning every row at the top rank. Ties are not an edge case
     /// here: 52 stat lines across 34 players share the rebound high, because the column is
-    /// clipped at 12 (SEMANTIC_MODEL.md §6.9).
+    /// clipped at 12 (SEMANTIC_MODEL.md §6.8).
     /// </summary>
     public CertifiedQuery SingleGameMax(string sport, string column, string label)
     {
@@ -171,8 +174,10 @@ public sealed class CertifiedQueries(DatasetFacts facts)
         $"Roster size for {school} {sport}. Counts all rostered players, including those with no stat lines.");
 
     /// <summary>
-    /// Wins by score comparison. Correct for this dataset — it has no ties and no forfeits —
-    /// but PRODUCTION_NOTES.md §2.3 explains why real data needs an explicit result column:
+    /// Wins by score comparison. Four basketball games in this dataset are drawn (FINDINGS.md
+    /// §1.7), and strict `>` excludes them rather than miscounting them, so the count is right
+    /// while the record is incomplete: draws are silently absent from any win/loss accounting.
+    /// PRODUCTION_NOTES.md §2.3 explains why real data needs an explicit result column, since
     /// forfeits, vacated wins and legal ties all make "scored more" the wrong definition.
     /// </summary>
     public CertifiedQuery TeamWins(string school, string sport)
