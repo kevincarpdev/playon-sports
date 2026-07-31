@@ -167,6 +167,7 @@ nonexistent table.
 | [FINDINGS.md](FINDINGS.md) | What's wrong with this data and this model, verified with SQL. |
 | [PRODUCTION_NOTES.md](PRODUCTION_NOTES.md) | How this behaves on PlayOn's real data (football, then track & field), plus Postgres and fuzzy search. |
 | [AI_NOTES.md](AI_NOTES.md) | How I used AI at three levels, the multi-model review panel, and where AI was wrong. |
+| [PLAN.md](PLAN.md) | The plan written before any implementation, after the data recon pass. |
 
 ## How it works, in one paragraph
 
