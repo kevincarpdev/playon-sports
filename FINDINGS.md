@@ -1,7 +1,7 @@
 # Findings
 
 What I learned about this dataset and this model. Everything here was verified with my own
-queries; the SQL to re-derive each claim is in `src/SportsQa.EvalRunner/goldens.json` under
+queries. The SQL to re-derive each claim is in `src/SportsQa.EvalRunner/goldens.json` under
 `groundTruthSql`.
 
 Where a finding has a direct analogue in MaxPreps production data, I've noted it, the
@@ -65,7 +65,7 @@ a tie": **"who had the most rebounds in a single game" has no meaningful answer.
 lines across 34 players share the maximum. Any system returning one name is fabricating a
 distinction the data does not contain.
 
-I return the full tied set with a `tied_result` caveat. Arguably it should refuse outright;
+I return the full tied set with a `tied_result` caveat. Arguably it should refuse outright.
 I documented that judgement call rather than silently picking.
 
 ### 1.4 40 of 160 players have no stat rows at all, and it's structural
@@ -236,15 +236,16 @@ A later verification pass caught the same class of error twice more in this very
 written "five of the 17 interpretations are broken" over a table whose five rows covered only
 four questions, and "plus three that execute cleanly" over a list of five. So I re-derived the
 tally the only way that settles it: executing all 17 against the database and counting what
-came back. Three throw, four are right, ten are wrong or unscoped. Prose counts drift; a query
+came back. Three throw, four are right, ten are wrong or unscoped. Prose counts drift. A query
 does not. That is the same argument `AI_NOTES.md` makes for writing evals early, and I
 evidently needed to learn it twice.
 
 **The design consequence.** Because model SQL fails in this many independent ways, I inverted
 the trust relationship: the model classifies intent and surfaces entities, and the semantic
 layer owns reviewed SQL per intent (`CertifiedQueries`). Model SQL is the guarded fallback for
-unrecognised intents, never the primary path. Every response reports `sqlSource` and, when we
-overrode the model, why.
+unrecognised intents, never the primary path. Any response that ran SQL reports `sqlSource`
+and, when we overrode the model, why. Clarifications and refusals never executed anything, so
+neither field is present on those paths.
 
 ---
 
@@ -264,7 +265,7 @@ A bare yes/no is wrong roughly half the time, and Riverside is the *away* team i
 three, so the model's home-only join finds just one game.
 
 **Decision:** require the `sport` slot. Return `NeedsClarification` with both sports as
-options; once filled, answer definitively. Two goldens pin both branches so the opposite
+options. Once filled, answer definitively. Two goldens pin both branches so the opposite
 answers stay locked in.
 
 ### 3.2 "How many points did Jackson score?", three candidate entities
@@ -289,7 +290,7 @@ No metric exists in the data. "Most points" mixes sports (§1.6) and rewards 14-
 (§1.5).
 
 **Decision:** `NeedsClarification` on both `metric` and `sport`, offering concrete options.
-Refusing outright would be defensible; asking is better product.
+Refusing outright would be defensible. Asking is better product.
 
 ### 3.4 "This season" has no referent
 

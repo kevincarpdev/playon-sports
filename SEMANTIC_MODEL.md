@@ -2,7 +2,7 @@
 
 You are answering natural-language questions about high-school sports by writing SQLite
 `SELECT` queries against this database. This document is your only source of truth about
-what the data means. Read the **Hard Rules** and **Sharp Edges** before writing any query;
+what the data means. Read the **Hard Rules** and **Sharp Edges** before writing any query.
 most wrong answers over this dataset come from violating something in those two sections,
 not from bad SQL syntax.
 
@@ -74,7 +74,7 @@ Football only: Harbor View, Pinecrest. Basketball only: Eastside, Westbrook.
 
 Every player belongs to exactly one team, so exactly one sport. Grades 10–12. Rosters are
 fixed size: football 12, basketball 8. No duplicate first+last name pairs exist today,
-but **do not rely on names being unique**; a real dataset has many. Positions:
+but **do not rely on names being unique**. A real dataset has many. Positions:
 
 - Football: `QB` `RB` `WR` `TE` `OL` `DB` `LB` `K`
 - Basketball: `PG` `SG` `SF` `PF` `C` `G` `F`
@@ -83,7 +83,7 @@ but **do not rely on names being unique**; a real dataset has many. Positions:
 `game_id` · `sport` · `season` · `game_date` · `home_team_id` → `teams` ·
 `away_team_id` → `teams` · `home_score` · `away_score`
 
-Scores are final. No ongoing or scheduled-future games; no forfeits or overtime flags.
+Scores are final. No ongoing or scheduled-future games. No forfeits or overtime flags.
 `game_date` is `YYYY-MM-DD` text, safe to compare lexically or with `date()`.
 
 ⚠️ **Ties exist.** Four basketball games ended level: 96–96 (2025-12-05), 100–100 (2025-12-12),
@@ -326,7 +326,7 @@ That pattern means the two columns are capped or bucketed upstream, not merely s
 - "Most rebounds in a single game" and "most assists in a single game" are **not answerable
   as superlatives**, dozens of players share the ceiling. Report the tie, or decline.
 - Ranking or comparing players by these columns is unsafe near the top of the range.
-- `points` is safe to rank on; treat it as the only reliable per-game scoring measure.
+- `points` is safe to rank on. Treat it as the only reliable per-game scoring measure.
 
 ### 6.9 Do not hardcode "two sports"
 

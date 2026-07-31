@@ -72,7 +72,8 @@ no review, because they read as authoritative.
 `.github/workflows/ci.yml` runs six gates on every PR, all offline:
 
 1. Build clean.
-2. The 26 unit tests pass, including every `SqlGuard` bypass an adversarial review found.
+2. The 42 unit tests pass: every `SqlGuard` bypass an adversarial review found, plus hostile
+   inputs (prompt injection, jailbreaks, SQL injection through slots, privilege escalation).
 3. The 24 goldens pass, a regression in *answer correctness* fails the merge.
 4. A deliberately corrupted golden must fail. This guards the guard: a suite that cannot go red
    gates nothing, and that degradation is silent.
@@ -124,7 +125,7 @@ golden I needed an exact count and ran `COUNT(*) WHERE rebounds = 12`: **52 stat
 34 players**. Then the distribution query showed the ceiling.
 
 **How I caught it:** writing a golden forced an exact number. A prose claim tolerated
-"at least 5"; an assertion did not. That's an argument for writing evals early, they're a
+"at least 5". An assertion did not. That's an argument for writing evals early: they're a
 forcing function on your own sloppiness, not just a regression net.
 
 I corrected `SEMANTIC_MODEL.md` and added §6.8 on clipped columns.
@@ -141,7 +142,7 @@ whole exercise is about, and I'd written it myself while building the defence ag
 
 **How I caught it:** the `resolvedSlots` diagnostic. The response *looked* fine, it asked a
 sensible-seeming clarifying question about sport, but the diagnostics showed
-`entity: "Jackson"` already filled. I'd only added that field for observability; it caught a
+`entity: "Jackson"` already filled. I'd only added that field for observability. It caught a
 real bug.
 
 Fix: precompute **shadowing** at lexicon load. An entity whose token set is a strict subset of
@@ -160,7 +161,7 @@ is a bad proxy for complexity.
 **How I caught it:** smoke-testing every one of the 17 supported questions rather than the
 happy ones. It was the only question that failed for a reason unrelated to the data.
 
-Fix: the text-derived tier is a **prior**; the resolved intent is **evidence**. `EscalateFor`
+Fix: the text-derived tier is a **prior**. The resolved intent is **evidence**. `EscalateFor`
 raises the tier once the intent is known. This forced a distinction I should have drawn from
 the start, **tier is cost control, role is security**, and `Capabilities.IsSecurityBoundary`
 now marks the one capability escalation may never grant.

@@ -11,17 +11,16 @@ Companion docs: [SEMANTIC_MODEL.md](SEMANTIC_MODEL.md) (the data contract),
 
 ## 1. The one idea
 
-**The model is an untrusted collaborator. It proposes; the system decides.**
+**The model is an untrusted collaborator. It proposes. The system decides.**
 
 Concretely, I inverted the usual text-to-SQL trust relationship:
 
 > The model classifies **intent** and surfaces **entities**.
 > The semantic layer owns the **SQL**.
 
-That inversion is a direct response to evidence: five of the 17 recorded interpretations are
-broken in five different ways, and three more execute cleanly while returning wrong numbers
-(FINDINGS §2). Reported confidence on the broken ones ranges 0.88–0.95, so **the model's own
-confidence cannot be the gate**.
+That inversion is a direct response to evidence: of the 17 recorded interpretations, three
+throw, four are correct, and ten run cleanly with a defect (FINDINGS §2). Reported confidence
+on the defective ones ranges 0.88–0.97, so **the model's own confidence cannot be the gate**.
 
 ### Read this before the rest: the model-SQL fallback is unreachable as configured
 
@@ -56,7 +55,7 @@ goldens under `untrusted-slot-input`.
 
 Any response that ran SQL reports where that SQL came from (`sqlSource`) and, when we discarded
 the model's version, why (`modelSqlRejectedBecause`). Both sit under `diagnostics` on the
-`Answered` path; a clarification or a refusal never executed anything, so neither field is
+`Answered` path. A clarification or a refusal never executed anything, so neither field is
 present.
 
 ---
@@ -101,8 +100,9 @@ conjure an injuries table.
 
 ### `Configuration/SportsQaOptions.cs`
 Every tunable in one place, bound from `appsettings.json`. Row caps, timeouts, confidence
-thresholds, routing keyword lists, the default role. **No numeric or string literal thresholds
-live in the pipeline**, retuning is a config change, not a rebuild.
+thresholds, list sizes, routing keyword lists, the default role. **Retunable thresholds live
+in config, not as pipeline literals**, so changing them is a config change, not a rebuild.
+(A hard-coded `topN: 1` for single-winner intents is structural, not a knob.)
 
 ### `Security/Authorization.cs`, who the AI is acting for
 Five roles ordered by reach: `Anonymous` → `Member` → `Subscriber` → `Analyst` → `Admin`. Each
@@ -126,7 +126,7 @@ Jackson score" has no aggregate keyword and is 8 words, so it routed as `Lookup`
 refused. Word count is a bad proxy. Now the tier is a **prior** and the resolved intent is
 **evidence**, `EscalateFor` raises the tier once the intent is known.
 
-The separation that makes this safe: **tier moves cost controls; role governs data access.**
+The separation that makes this safe: **tier moves cost controls. Role governs data access.**
 `Capabilities.IsSecurityBoundary` marks the one capability (`OpsIntents`) that escalation may
 never grant.
 

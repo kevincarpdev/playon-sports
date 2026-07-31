@@ -57,7 +57,7 @@ running:
 ./smoke.sh
 ```
 
-The evals prove the *answers* are right; the smoke test proves the *endpoint* behaves. Both
+The evals prove the *answers* are right. The smoke test proves the *endpoint* behaves. Both
 exit non-zero on failure.
 
 Both run in CI on every pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)),
@@ -170,7 +170,7 @@ nonexistent table.
 
 ## How it works, in one paragraph
 
-The model classifies **intent** and surfaces **entities**; the semantic layer owns the **SQL**.
+The model classifies **intent** and surfaces **entities**. The semantic layer owns the **SQL**.
 Run all 17 recorded interpretations against the database and three throw, four are right, and
 ten execute cleanly while returning something wrong, so validation alone can only reject, never
 repair. Instead, recognised intents run reviewed query templates that handle each documented

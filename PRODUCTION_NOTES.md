@@ -88,7 +88,7 @@ production it is worse:
 
 **Fix:** an explicit `result` enum (`win` / `loss` / `tie` / `forfeit_win` / `forfeit_loss` /
 `vacated`) on a team-game fact, and never derive outcome from scores in a certified query. The
-toy data let me take the shortcut; production would not.
+toy data let me take the shortcut. Production would not.
 
 ### 2.4 Coach-entered stats make the fact table retroactively mutable
 
@@ -116,7 +116,7 @@ generalises directly into a freshness SLO per (sport, season, state).
 2. **Verification status** as a first-class dimension, verified vs coach-reported vs
    unverified, surfaced as a caveat, exactly like `tied_result`.
 3. **Plausibility bounds** in the semantic model. Our clipped-rebounds finding (FINDINGS §1.3)
-   is the friendly version; the production version is a typo'd outlier winning a leaderboard.
+   is the friendly version. The production version is a typo'd outlier winning a leaderboard.
    Bounds turn that into a caveat instead of a headline.
 
 ### 2.5 Classification and division make cross-comparisons invalid
@@ -151,7 +151,7 @@ Our toy data already has a 52-way tie on rebounds and a 2-way tie on highest-sco
 Across every football program in the country, ties on integer stats are **guaranteed**,
 hundreds of athletes will share "3 touchdowns in a game".
 
-`LIMIT 1` is not a minor bug at that scale; it is a permanently wrong answer generator. The
+`LIMIT 1` is not a minor bug at that scale. It is a permanently wrong answer generator. The
 `DENSE_RANK()` approach in `CertifiedQueries` is the only defensible shape, and the
 `tied_result` caveat becomes a routine part of answers rather than an exception.
 
@@ -410,7 +410,8 @@ That is why the goldens run in CI (`.github/workflows/ci.yml`). A semantic-model
 changes an answer fails the merge. Six gates, all offline:
 
 1. Build clean.
-2. The 26 unit tests pass, covering every known `SqlGuard` bypass.
+2. The 42 unit tests pass: every known `SqlGuard` bypass, plus hostile-input coverage
+   (prompt injection, jailbreaks, SQL injection through slots, privilege escalation).
 3. The 24 goldens pass, with expected values derived from the data rather than from the system.
 4. **A deliberately corrupted golden must fail.** This is the one people skip. A suite that
    cannot go red gates nothing, and it degrades silently, so the pipeline proves its own

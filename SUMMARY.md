@@ -1,7 +1,7 @@
 # Summary
 
 A plain-language overview of what I built and what I found. The technical detail lives in the
-other documents; this is the version worth reading first.
+other documents. This is the version worth reading first.
 
 ---
 
@@ -39,7 +39,7 @@ Four things worth knowing about, all verified by hand:
 
 **A summary table is out of date for exactly the two players the questions ask about.** The
 dataset has a pre-calculated "season totals" table, and the AI prefers it because it's faster.
-It's missing whole games. One player shows 165 points; the real answer is 232. Both queries look
+It's missing whole games. One player shows 165 points. The real answer is 232. Both queries look
 reasonable. Only one is right.
 
 **One statistic points at a game that doesn't exist.** Depending on how you write the query, that
@@ -73,9 +73,10 @@ care most about getting right.
 There are two suites. The important one is **24 answer tests where the expected values come from
 queries I wrote myself**, never from the system's own output. Otherwise you just lock in whatever
 it currently does, including the mistakes. Twenty record the query that proves their number, so
-anyone can re-check it by pasting one line; the other four assert that the system refuses or asks
-rather than answers, where there is no number to derive. Underneath sits a second suite of **26
-unit tests** on the query safety layer.
+anyone can re-check it by pasting one line. The other four assert that the system refuses or asks
+rather than answers, where there is no number to derive. Underneath sits a second suite of **42
+unit tests** on the query safety layer: 26 on `SqlGuard` itself, and 16 hostile-input cases
+covering prompt injection, jailbreaks, SQL injection through slots, and privilege escalation.
 
 Both run automatically on every change, and one step deliberately breaks a test to confirm the
 suite can still catch a problem. A test suite that can't fail isn't protecting anything.
@@ -158,7 +159,7 @@ the driver level, so even a bug in the layers above cannot write.
 The instructions said not to spend time on login, user interfaces, or deployment, so I didn't.
 What I did build is *permissions for the AI itself*. Different subscription levels reach
 different data, and internal admin functions are invisible to regular users. That isn't login
-security; it's controlling what the AI is allowed to touch, which is the same trust problem as
+security. It's controlling what the AI is allowed to touch, which is the same trust problem as
 everything else here.
 
 I also left the connection points for a real AI model and cloud hosting documented but not built,
