@@ -59,10 +59,15 @@ public sealed class CertifiedQueries(DatasetFacts facts)
             $"Schools fielding a team in all of: {string.Join(", ", facts.Sports)}.");
     }
 
-    /// <summary>Ranked leaders, returning the whole tied set rather than an arbitrary row.</summary>
+    /// <summary>
+    /// Ranked leaders, returning the whole tied set rather than an arbitrary row. Ordering
+    /// follows the metric's declared direction, not an assumption that bigger wins — see
+    /// PRODUCTION_NOTES.md §3.1 for why that assumption breaks on track and field times.
+    /// </summary>
     public CertifiedQuery TopByMetric(string sport, Metric metric, int topN)
     {
         var season = facts.SeasonFor(sport);
+        var order = metric.SqlDirection;
 
         return new CertifiedQuery(
             $"""
@@ -70,14 +75,14 @@ public sealed class CertifiedQueries(DatasetFacts facts)
                SELECT {PlayerName} AS player,
                       {metric.Expression} AS {metric.Key},
                       COUNT(DISTINCT s.game_id) AS games_played,
-                      DENSE_RANK() OVER (ORDER BY {metric.Expression} DESC) AS rnk,
+                      DENSE_RANK() OVER (ORDER BY {metric.Expression} {order}) AS rnk,
                       s.player_id
                {StatJoins}
                WHERE g.sport = $sport AND g.season = $season
                GROUP BY s.player_id
              )
              WHERE rnk <= $topN
-             ORDER BY value DESC, player_id
+             ORDER BY value {order}, player_id
              """,
             new Dictionary<string, object?>
             {
@@ -89,7 +94,11 @@ public sealed class CertifiedQueries(DatasetFacts facts)
             RankedValueColumn: "value");
     }
 
-    /// <summary>Single-game maximum. Ties are common here — five players share the rebound high.</summary>
+    /// <summary>
+    /// Single-game maximum, returning every row at the top rank. Ties are not an edge case
+    /// here: 52 stat lines across 34 players share the rebound high, because the column is
+    /// clipped at 12 (SEMANTIC_MODEL.md §6.9).
+    /// </summary>
     public CertifiedQuery SingleGameMax(string sport, string column, string label)
     {
         var season = facts.SeasonFor(sport);
@@ -161,6 +170,11 @@ public sealed class CertifiedQueries(DatasetFacts facts)
         new Dictionary<string, object?> { ["$school"] = school, ["$sport"] = sport },
         $"Roster size for {school} {sport}. Counts all rostered players, including those with no stat lines.");
 
+    /// <summary>
+    /// Wins by score comparison. Correct for this dataset — it has no ties and no forfeits —
+    /// but PRODUCTION_NOTES.md §2.3 explains why real data needs an explicit result column:
+    /// forfeits, vacated wins and legal ties all make "scored more" the wrong definition.
+    /// </summary>
     public CertifiedQuery TeamWins(string school, string sport)
     {
         var season = facts.SeasonFor(sport);
@@ -234,7 +248,13 @@ public sealed class CertifiedQueries(DatasetFacts facts)
             $"All {sport} {season} meetings between {schoolA} and {schoolB}, both home and away.");
     }
 
-    /// <summary>Rollup rows the nightly job has left behind. Operational, not fan-facing.</summary>
+    /// <summary>
+    /// Rollup rows the nightly job has left behind. Operational, not fan-facing.
+    ///
+    /// This is the seed of a real freshness SLO. MaxPreps statistics are coach-entered, arrive
+    /// late and get corrected after publication, so freshness has to be monitored per sport,
+    /// season and state rather than checked once. See PRODUCTION_NOTES.md §2.4.
+    /// </summary>
     public CertifiedQuery StaleRollupRows() => new(
         """
         SELECT p.first_name || ' ' || p.last_name AS player, pst.sport, pst.season,

@@ -14,11 +14,36 @@ public static class Slots
 }
 
 /// <summary>
-/// A metric a caller can rank by. Kept as a closed set with an explicit SQL expression and
-/// the sport it is meaningful for — this is what stops "points" being summed across sports.
+/// Which end of a metric's range is the good end.
+///
+/// Every metric in this dataset is higher-is-better, so this looks redundant here. It is not:
+/// the moment track and field arrives, every running event is a time, and ranking those
+/// descending silently returns the *slowest* athlete as the leader. That bug looks entirely
+/// plausible in a result set, which is exactly the kind we cannot ship.
 /// </summary>
-public sealed record Metric(string Key, string Label, string Expression, string? OnlyForSport)
+public enum MetricDirection
 {
+    HigherIsBetter,
+    LowerIsBetter,
+}
+
+/// <summary>
+/// A metric a caller can rank by. A closed set, each with an explicit SQL expression, the
+/// sport it is meaningful for, and its direction — the three things a ranking needs and that a
+/// model should never be trusted to infer.
+///
+/// Restricting by sport is what structurally prevents summing football and basketball points
+/// together; see SEMANTIC_MODEL.md §6.1.
+/// </summary>
+public sealed record Metric(
+    string Key,
+    string Label,
+    string Expression,
+    string? OnlyForSport,
+    MetricDirection Direction = MetricDirection.HigherIsBetter)
+{
+    public string SqlDirection => Direction == MetricDirection.HigherIsBetter ? "DESC" : "ASC";
+
     public static readonly IReadOnlyList<Metric> All =
     [
         new("points", "Most total points", "SUM(s.points)", null),
