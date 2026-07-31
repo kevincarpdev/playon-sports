@@ -3,7 +3,13 @@
 # that cannot browse the repo. Writes review-bundle.md in the package root.
 set -euo pipefail
 
+#   ./make-review-bundle.sh          one file, review-bundle.md
+#   ./make-review-bundle.sh --split  two smaller files, for tools with upload limits
 cd "$(dirname "$0")"
+
+SPLIT=false
+[[ "${1:-}" == "--split" ]] && SPLIT=true
+
 OUT="review-bundle.md"
 
 emit() {
@@ -42,11 +48,28 @@ HEADER
 
 echo "Building $OUT..."
 
+# In split mode the single-file header is discarded and part 1 starts fresh.
+$SPLIT && rm -f "$OUT" && OUT="review-part1-docs.md" && cat > "$OUT" <<'H2'
+# Review Bundle, part 1 of 2 — Documentation
+
+Design docs and findings. Part 2 carries the source and the eval goldens.
+H2
+
 # Docs — reading order matters, architecture first.
 for doc in README.md ARCHITECTURE.md SEMANTIC_MODEL.md FINDINGS.md PRODUCTION_NOTES.md \
            AI_NOTES.md PLAN.md ASSESSMENT.md SUPPORTED_QUESTIONS.md data/schema.md; do
   emit "$doc"
 done
+
+if $SPLIT; then
+  OUT="review-part2-code.md"
+  cat > "$OUT" <<'H3'
+# Review Bundle, part 2 of 2 — Source and goldens
+
+C# source in dependency order, then the eval goldens and the recorded LLM responses.
+Part 1 carries the design docs.
+H3
+fi
 
 # Application source, in dependency order.
 for src in \
@@ -86,5 +109,7 @@ emit "smoke.sh" bash
   printf '```\n'
 } >> "$OUT"
 
-printf '\nWrote %s (%s, ~%s words)\n' \
-  "$OUT" "$(du -h "$OUT" | cut -f1)" "$(wc -w < "$OUT" | tr -d ' ')"
+for f in review-bundle.md review-part1-docs.md review-part2-code.md; do
+  [[ -f "$f" ]] && printf 'Wrote %-26s %6s  ~%s words\n' \
+    "$f" "$(du -h "$f" | cut -f1)" "$(wc -w < "$f" | tr -d ' ')"
+done
