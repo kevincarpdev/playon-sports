@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Connections;
 using SportsQa.Api.Configuration;
 using SportsQa.Api.Contracts;
 using SportsQa.Api.Data;
@@ -41,6 +42,31 @@ builder.Services.ConfigureHttpJsonOptions(json =>
 });
 
 var app = builder.Build();
+
+// Fail fast. These singletons are registered as factories, so without this they resolve on the
+// first request instead — meaning a missing database serves 500s rather than refusing to boot.
+try
+{
+    app.Services.GetRequiredService<SchemaCatalog>();
+    app.Services.GetRequiredService<DatasetFacts>();
+    app.Services.GetRequiredService<ILlmClient>();
+    app.Services.GetRequiredService<SemanticContextProvider>();
+}
+catch (Exception exception)
+{
+    Console.Error.WriteLine();
+    Console.Error.WriteLine($"Could not start: {exception.Message}");
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("Paths are resolved relative to the project directory:");
+    Console.Error.WriteLine($"  database   {options.DatabasePath}");
+    Console.Error.WriteLine($"  fake LLM   {options.FakeLlmResponsesPath}");
+    Console.Error.WriteLine($"  semantics  {options.SemanticModelPath}");
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("Run from the package root: dotnet run --project src/SportsQa.Api");
+    Console.Error.WriteLine();
+
+    return 1;
+}
 
 app.MapGet("/health", (SchemaCatalog catalog, SemanticContextProvider semantics) =>
     Results.Ok(new
@@ -154,4 +180,26 @@ admin.MapGet("/schema", (
         })
         : Results.NotFound());
 
-app.Run();
+try
+{
+    app.Run();
+}
+catch (IOException exception) when (exception.InnerException is AddressInUseException)
+{
+    // A busy port is an environment problem with an obvious fix, not a crash. On macOS it is
+    // usually either a second instance or Control Center's AirPlay Receiver, which also listens
+    // on 5000 — so say so rather than printing forty lines of stack trace.
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("Could not start: the configured address is already in use.");
+    Console.Error.WriteLine();
+    Console.Error.WriteLine("  See what holds it:  lsof -nP -iTCP:5000 -sTCP:LISTEN");
+    Console.Error.WriteLine("  Another instance?   pkill -f SportsQa.Api");
+    Console.Error.WriteLine("  macOS AirPlay?      System Settings > General > AirDrop & Handoff");
+    Console.Error.WriteLine("  Or pick a port:     dotnet run --project src/SportsQa.Api " +
+                            "--urls http://localhost:5099");
+    Console.Error.WriteLine();
+
+    return 1;
+}
+
+return 0;
