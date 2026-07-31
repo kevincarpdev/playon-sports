@@ -310,7 +310,40 @@ Golden 13 is the one that proves the slot layer is real rather than decorative: 
 question, plus a filled slot, must reach a definite answer — and that answer must be the
 football result, which is the opposite of the basketball one.
 
-## 7. Cut Line
+## 7. How We're Using AI on This
+
+Stated up front because it's a method, not an afterthought — and because the exercise
+evaluates it.
+
+**Authoring: narrow and directed.** I decide the component boundaries, then have AI write one
+component at a time against a stated contract. Not "build the `/ask` endpoint" — instead "a
+static validator taking SQL and a routing decision, resolving every identifier against this
+catalog, returning allow or a coded denial."
+
+The reason is drift. A broad prompt returns an architecture the model chose, which then has to
+be reverse-engineered before it can be corrected, and by the third such prompt nobody owns the
+design. Narrow prompts against chosen boundaries keep each file a single reviewable unit, so a
+mistake stays local.
+
+**Forensics before code.** Every claim about the data gets verified by a query I run and read.
+AI proposes hypotheses; SQL decides which are true. This is what makes the architecture a
+response to evidence rather than a guess.
+
+**Review: a panel, not a second opinion.** The author of a design is its worst critic, and that
+includes an AI that helped write it. So review is split by failure class, each model given the
+slice it's strongest at and a prompt written to attack rather than assess — verification on the
+most persistent model, bypass-hunting on the code-specialised one, architectural judgement on a
+model from a different training lineage. Verification runs first and blocks, because a review
+built on a wrong number is worse than no review.
+
+**Delivery: the goldens gate the merge.** Including a step that corrupts a golden on purpose to
+prove the suite can still fail. An optional, narrowly-scoped AI reviewer asks the one question
+humans are bad at: did this diff change what an answer *means* without touching a golden?
+
+The through-line, and it's the same as the runtime architecture: **the model proposes, a
+deterministic system decides.**
+
+## 8. Cut Line
 
 Ship first: semantic model, capability router, slot resolver, guard, pipeline, goldens,
 writeups.

@@ -392,7 +392,81 @@ If this were the mandate — modernising the data architecture with grounded AI 
 
 ---
 
-## 7. Honest limits of this document
+## 7. AI in the delivery pipeline, not just in the product
+
+Most of this document is about AI as a *feature*. This section is about AI as *engineering
+practice*, because at the scale of a data-platform rebuild that is where the leverage is.
+
+### The semantic model is code, so it gets a code's pipeline
+
+The most dangerous change in this system is not a code change. It is someone editing
+`SEMANTIC_MODEL.md` — redefining a metric, relaxing a season rule, adding a synonym — because
+it silently alters what every answer *means* with no compile error and no test failure.
+
+That is why the goldens run in CI (`.github/workflows/ci.yml`). A semantic-model edit that
+changes an answer fails the merge. Three gates, all offline:
+
+1. Build clean.
+2. The 20 goldens pass, with expected values derived from the data rather than from the system.
+3. **A deliberately corrupted golden must fail.** This is the one people skip. A suite that
+   cannot go red gates nothing, and it degrades silently — so the pipeline proves its own
+   teeth on every run.
+
+At PlayOn scale this becomes per-sport golden suites, each gating its own certified query
+library, with the freshness and verification dimensions (§2.4) asserted as part of the suite
+rather than checked by hand.
+
+### Where an AI reviewer actually earns its keep
+
+Generic "AI reviews your PR" produces comments engineers learn to scroll past. The version
+worth running asks one question a human reviewer is genuinely bad at:
+
+> Does this diff change what an answer *means* — grain, metric definition, season scoping, tie
+> handling, or role reach — without a corresponding golden?
+
+That is a semantic-drift detector, and it is checkable. It has the context a reviewer lacks
+(the whole semantic model) and it is looking for one thing, so its output stays low-volume
+enough to be read. The job exists in the workflow, scoped to exactly that prompt, and is
+skipped unless a key is configured — the graded path never depends on it.
+
+Two more worth wiring at scale, both narrow for the same reason:
+
+- **Plausibility triage on ingest.** Coach-entered stats (§2.4) produce impossible values. A
+  cheap model scoring incoming stat lines against per-sport bounds catches the 700-yard rushing
+  game before it wins a leaderboard.
+- **Alias mining for search.** The nicknames fans type ("Bosco", "SJB") are exactly what
+  trigram matching misses (§4.2). Mining query logs for terms that fail to resolve, then
+  proposing aliases for human approval, is a good use of a model: it generates candidates and a
+  person decides.
+
+Note the shape both share. The model **proposes**, a deterministic system **decides**. That is
+the same posture as the runtime architecture, applied to the toolchain.
+
+### Multi-model review, matched to strengths
+
+For anything high-stakes, one model's opinion is one model's blind spots. The review of this
+submission was split by failure class, each model given the slice it is strongest on and a
+prompt written to attack rather than assess — verification on the most persistent model,
+bypass-hunting on the code-specialised one, architectural judgement on a model from a
+different training lineage than the one that helped write it. `AI_NOTES.md` has the matrix.
+
+The principle generalises to production: route by task, keep prompts narrow, and never let the
+model that produced an artifact be the only one that reviews it.
+
+### Authoring discipline
+
+AI wrote most of the code in this submission. It did not choose the architecture.
+
+Component boundaries were decided first, then each component written against a stated contract,
+one at a time. The alternative — a broad prompt for a whole subsystem — yields a design nobody
+selected, and by the third such prompt it has drifted somewhere unowned. Narrow prompts against
+chosen boundaries keep every file a reviewable unit, which is why the bugs found during this
+build were all local and cheap to fix.
+
+For a platform rebuild this is the difference between AI as an accelerant and AI as technical
+debt with good grammar.
+
+## 8. Honest limits of this document
 
 I read the public MaxPreps football and track & field sections to ground the sport-specific
 structure (state and season faceting, stat leader categories, the individual-versus-team

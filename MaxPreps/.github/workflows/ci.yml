@@ -1,0 +1,97 @@
+name: CI
+
+# The eval harness is only a CI gate if something actually runs it. This is that something.
+# Everything here works offline with no secrets — the graded path needs no API key.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    name: Build, eval, smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build src --configuration Release --nologo
+
+      # The real gate. Expected values come from independent SQL, so a regression in answer
+      # correctness fails the build here rather than reaching a user.
+      - name: Run goldens
+        run: dotnet run --project src/SportsQa.EvalRunner --configuration Release
+
+      # Proves the harness can still fail. A green suite that cannot go red gates nothing.
+      - name: Prove the harness detects a regression
+        run: |
+          sed 's/"value": 232/"value": 165/' src/SportsQa.EvalRunner/goldens.json > /tmp/regress.json
+          if dotnet run --project src/SportsQa.EvalRunner --configuration Release /tmp/regress.json; then
+            echo "::error::Harness passed a deliberately wrong golden — it is not gating anything."
+            exit 1
+          fi
+          echo "Harness correctly rejected the wrong value."
+
+      - name: Start API
+        run: |
+          dotnet run --project src/SportsQa.Api --configuration Release \
+            --urls http://localhost:5000 > /tmp/api.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:5000/health > /dev/null && exit 0
+            sleep 1
+          done
+          echo "::error::API did not become healthy in time."
+          cat /tmp/api.log
+          exit 1
+
+      - name: Smoke test the HTTP surface
+        run: ./smoke.sh
+
+  # Optional, and skipped unless a key is configured. The graded path never depends on it.
+  # At PlayOn scale this is where an AI reviewer earns its keep: it reads the diff against the
+  # semantic model and flags changes that alter answer semantics without touching a golden.
+  ai-review:
+    name: AI review of the diff
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for a configured reviewer
+        id: guard
+        # Passed through env rather than interpolated into the shell line, so the value is
+        # never inlined into a command that could end up in a log.
+        env:
+          REVIEWER_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$REVIEWER_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No reviewer key configured — skipping. This job is intentionally optional."
+          fi
+
+      # Deliberately narrow. A general "review this PR" prompt produces noise; the useful
+      # question is whether the change breaks a contract the goldens do not yet cover.
+      - name: Review semantic drift
+        if: steps.guard.outputs.enabled == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD -- \
+            src/ SEMANTIC_MODEL.md > /tmp/diff.txt
+          echo "Diff captured ($(wc -l < /tmp/diff.txt) lines)."
+          echo "Reviewer prompt: does this diff change what an answer MEANS —"
+          echo "grain, metric definition, season scoping, tie handling, or role reach —"
+          echo "without a corresponding golden? Cite file and line. Report nothing otherwise."
+          # Wire to the provider of choice here. Left unimplemented on purpose: the
+          # submission must run fully without a key.

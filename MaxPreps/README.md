@@ -60,6 +60,9 @@ running:
 The evals prove the *answers* are right; the smoke test proves the *endpoint* behaves. Both
 exit non-zero on failure.
 
+Both run in CI on every pull request ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)),
+along with a step that corrupts a golden on purpose to prove the suite can still fail.
+
 ### If port 5000 is unavailable
 
 Two common causes on macOS. Check what holds it:
