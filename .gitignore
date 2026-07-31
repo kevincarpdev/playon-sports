@@ -7,3 +7,6 @@ obj/
 
 # OS cruft
 .DS_Store
+
+# Generated review artifact
+review-bundle.md

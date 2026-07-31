@@ -7,6 +7,21 @@ explicitly refused** — never confidently wrong.
 
 Requires the .NET SDK 8 or later. No API keys, no accounts, no network calls.
 
+Check the SDK is on your PATH:
+
+```bash
+dotnet --version
+```
+
+If that says `command not found` but you have the SDK installed to the default per-user
+location, add it to your PATH:
+
+```bash
+export PATH="$HOME/.dotnet:$PATH"
+```
+
+Then build:
+
 ```bash
 cd src && dotnet build
 ```
@@ -31,6 +46,16 @@ cd src/SportsQa.EvalRunner && dotnet run
 
 Exits `0` when all 20 goldens pass, non-zero otherwise, so it gates CI. It runs the pipeline
 in-process, so no server needs to be running.
+
+To test the HTTP surface instead — every outcome, status code and authorization boundary —
+start the API and run:
+
+```bash
+./smoke.sh
+```
+
+The evals prove the *answers* are right; the smoke test proves the *endpoint* behaves. Both
+exit non-zero on failure.
 
 ## Try it
 
