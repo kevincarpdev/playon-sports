@@ -28,6 +28,9 @@ public sealed class ExecutionOptions
 
     /// <summary>Rows a clarification may offer before we stop listing candidates.</summary>
     public int MaxClarificationOptions { get; init; } = 4;
+
+    /// <summary>Size of a "top N" list when the question asks for one.</summary>
+    public int TopListSize { get; init; } = 5;
 }
 
 public sealed class TrustOptions

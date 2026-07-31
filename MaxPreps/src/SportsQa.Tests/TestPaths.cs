@@ -10,6 +10,11 @@ internal static class TestPaths
 
     public static string Database => Path.Combine(Root, "data", "sports.db");
 
+    public static string FakeLlmResponses =>
+        Path.Combine(Root, "src", "SportsQa.Api", "Llm", "fake_llm_responses.json");
+
+    public static string SemanticModel => Path.Combine(Root, "SEMANTIC_MODEL.md");
+
     private static string Find()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -56,8 +56,9 @@ Design docs and findings. Part 2 carries the source and the eval goldens.
 H2
 
 # Docs — reading order matters, architecture first.
-for doc in README.md ARCHITECTURE.md SEMANTIC_MODEL.md FINDINGS.md PRODUCTION_NOTES.md \
-           AI_NOTES.md PLAN.md ASSESSMENT.md SUPPORTED_QUESTIONS.md data/schema.md; do
+for doc in SUMMARY.md README.md ARCHITECTURE.md SEMANTIC_MODEL.md FINDINGS.md \
+           PRODUCTION_NOTES.md AI_NOTES.md ASSESSMENT.md SUPPORTED_QUESTIONS.md \
+           data/schema.md; do
   emit "$doc"
 done
 

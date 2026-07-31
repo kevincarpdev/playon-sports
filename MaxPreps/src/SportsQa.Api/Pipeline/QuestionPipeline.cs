@@ -187,7 +187,7 @@ public sealed class QuestionPipeline(
                 certified.TopByMetric(sport, metric, topN: 1),
 
             "top5_scorers_basketball" when sport is not null && metric is not null =>
-                certified.TopByMetric(sport, metric, topN: TopListSize),
+                certified.TopByMetric(sport, metric, topN: options.Execution.TopListSize),
 
             "best_player" when sport is not null && metric is not null =>
                 certified.TopByMetric(sport, metric, topN: 1),
@@ -269,7 +269,4 @@ public sealed class QuestionPipeline(
 
     private static string? Slot(IReadOnlyDictionary<string, string> slots, string name) =>
         slots.TryGetValue(name, out var value) && !string.IsNullOrWhiteSpace(value) ? value : null;
-
-    /// <summary>Size of a "top N" list when the question asks for one.</summary>
-    private const int TopListSize = 5;
 }

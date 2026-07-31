@@ -1,7 +1,7 @@
-# SportsQa — grounded natural-language questions over high-school sports data
+# SportsQa: grounded natural-language questions over high-school sports data
 
-Ask questions in plain English; get answers that are **correct, honestly qualified, or
-explicitly refused** — never confidently wrong.
+Ask questions in plain English and get answers that are **correct, honestly qualified, or
+explicitly refused**, never confidently wrong.
 
 ## Quick start
 
@@ -20,7 +20,7 @@ location, add it to your PATH:
 export PATH="$HOME/.dotnet:$PATH"
 ```
 
-**Every command below runs from this directory** — the package root, containing `src/` and
+**Every command below runs from this directory**, the package root containing `src/` and
 `data/`. Each block is independent, so paths don't chain.
 
 Build:
@@ -29,8 +29,8 @@ Build:
 dotnet build src
 ```
 
-Run the evals — the single most informative command. It runs the pipeline in-process, so no
-server needs to be running:
+Run the evals. This is the single most informative command, and it runs the pipeline in-process,
+so no server needs to be running:
 
 ```bash
 dotnet run --project src/SportsQa.EvalRunner
@@ -50,7 +50,7 @@ Health check, from another terminal:
 curl http://localhost:5000/health
 ```
 
-Test the HTTP surface — every outcome, status code and authorization boundary. Needs the API
+Test the HTTP surface: every outcome, status code and authorization boundary. Needs the API
 running:
 
 ```bash
@@ -71,9 +71,9 @@ Two common causes on macOS. Check what holds it:
 lsof -nP -iTCP:5000 -sTCP:LISTEN
 ```
 
-- **`ControlCe`** — Control Center's AirPlay Receiver squats on port 5000. Either disable
+- **`ControlCe`.** Control Center's AirPlay Receiver squats on port 5000. Either disable
   AirPlay Receiver in System Settings → General → AirDrop & Handoff, or use another port.
-- **`SportsQa.Api`** — you already have an instance running in another terminal. Reuse it, or
+- **`SportsQa.Api`.** You already have an instance running in another terminal. Reuse it, or
   stop it with `pkill -f SportsQa.Api`.
 
 To use a different port, pass it to both the API and the smoke test:
@@ -105,8 +105,8 @@ curl -s -X POST http://localhost:5000/ask \
   -d '{"question":"Did Riverside beat Oak Hill this season?"}'
 ```
 
-Returns `needs_clarification` with both sports as options — because the honest answer differs
-by sport. Send the slot back to close the loop:
+Returns `"outcome": "NeedsClarification"` with both sports as options, because the honest
+answer differs by sport. Send the slot back to close the loop:
 
 ```bash
 curl -s -X POST http://localhost:5000/ask \
@@ -114,7 +114,7 @@ curl -s -X POST http://localhost:5000/ask \
   -d '{"question":"Did Riverside beat Oak Hill this season?","slots":{"sport":"Football"}}'
 ```
 
-Oak Hill won 24–21 — so Riverside did **not**. Ask the same question with
+Oak Hill won 24–21, so Riverside did **not**. Ask the same question with
 `"sport":"Basketball"` and Riverside won both meetings. A single yes/no would have been wrong
 half the time.
 
@@ -133,12 +133,12 @@ Internal operations (Admin only; other roles get 404, so the surface isn't disco
 curl -s -H 'X-SportsQa-Role: Admin' http://localhost:5000/admin/rollup-freshness
 ```
 
-Reports the two `player_season_totals` rows the nightly job left stale — the live data-quality
+Reports the two `player_season_totals` rows the nightly job left stale, the live data-quality
 defect in this dataset.
 
 ## The `/ask` contract
 
-Request: `{ "question": "...", "slots": { "sport": "Football" } }` — `slots` carries
+Request: `{ "question": "...", "slots": { "sport": "Football" } }`, where `slots` carries
 previously-answered clarifications.
 
 Response outcomes:
@@ -150,7 +150,10 @@ Response outcomes:
 | `CannotAnswer` | 422 | The data can't support it. Clarifying won't help. |
 | `Error` | 500 | Correlation id, no internals. Never a stack trace. |
 
-Reported `confidence` is **ours**, derived from validation and result shape — deliberately not
+A missing or blank `question` never reaches the pipeline: it returns **400** with a validation
+problem, which is a malformed request rather than an outcome. `smoke.sh` covers both cases.
+
+Reported `confidence` is **ours**, derived from validation and result shape, deliberately not
 the model's self-reported number, which we've observed at 0.88 on a query against a
 nonexistent table.
 
@@ -162,18 +165,17 @@ nonexistent table.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Start here for the technical detail.** Component-by-component overview, request flow, review checklist. |
 | [SEMANTIC_MODEL.md](SEMANTIC_MODEL.md) | The data contract, written as system-prompt context for a real model. Grain, metrics, join paths, and ten sharp edges. |
 | [FINDINGS.md](FINDINGS.md) | What's wrong with this data and this model, verified with SQL. |
-| [PRODUCTION_NOTES.md](PRODUCTION_NOTES.md) | How this behaves on PlayOn's real data — football, then track & field — plus Postgres and fuzzy search. |
+| [PRODUCTION_NOTES.md](PRODUCTION_NOTES.md) | How this behaves on PlayOn's real data (football, then track & field), plus Postgres and fuzzy search. |
 | [AI_NOTES.md](AI_NOTES.md) | How I used AI at three levels, the multi-model review panel, and where AI was wrong. |
-| [PLAN.md](PLAN.md) | The plan written before implementation, after data recon. |
 
 ## How it works, in one paragraph
 
 The model classifies **intent** and surfaces **entities**; the semantic layer owns the **SQL**.
-Five of the 17 recorded model interpretations are broken in five different ways, and three more
-execute cleanly while returning wrong numbers — so validation alone can only reject, never
+Run all 17 recorded interpretations against the database and three throw, four are right, and
+ten execute cleanly while returning something wrong, so validation alone can only reject, never
 repair. Instead, recognised intents run reviewed query templates that handle each documented
 sharp edge once and correctly. Model SQL exists as a validated fallback, but note honestly that
-**with the recorded fake client it is unreachable** — unknown intents are refused before
+**with the recorded fake client it is unreachable**: unknown intents are refused before
 execution, so an unrecognised question gets a refusal rather than generated SQL. Full reasoning,
 including why that's the honest description rather than the marketing one, in
 [ARCHITECTURE.md](ARCHITECTURE.md).
@@ -181,7 +183,7 @@ including why that's the honest description rather than the marketing one, in
 ## Configuration
 
 Everything tunable lives under `SportsQa` in
-[`appsettings.json`](src/SportsQa.Api/appsettings.json) — row caps, timeouts, confidence
+[`appsettings.json`](src/SportsQa.Api/appsettings.json): row caps, timeouts, confidence
 thresholds, routing keywords, default role. No thresholds are hardcoded in the pipeline.
 
 ## Layout
@@ -200,7 +202,8 @@ src/SportsQa.Api/
   Llm/             ILlmClient and the recorded fake (unmodified)
 
 src/SportsQa.Tests/
-  SqlGuardTests.cs 26 tests on the validation boundary, incl. every known bypass
+  SqlGuardTests.cs   26 tests on the validation boundary, incl. every known bypass
+  InjectionTests.cs  16 tests: prompt injection, jailbreaks, SQL injection, escalation
 
 src/SportsQa.EvalRunner/
   goldens.json     24 goldens across 16 failure classes, 20 with groundTruthSql
