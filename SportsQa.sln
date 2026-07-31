@@ -1,10 +1,10 @@
 ﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.Api", "SportsQa.Api\SportsQa.Api.csproj", "{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.Api", "src\SportsQa.Api\SportsQa.Api.csproj", "{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.EvalRunner", "SportsQa.EvalRunner\SportsQa.EvalRunner.csproj", "{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.EvalRunner", "src\SportsQa.EvalRunner\SportsQa.EvalRunner.csproj", "{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.Tests", "SportsQa.Tests\SportsQa.Tests.csproj", "{5409E98D-48AE-4AE1-8E00-75400CCD3BCB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.Tests", "src\SportsQa.Tests\SportsQa.Tests.csproj", "{5409E98D-48AE-4AE1-8E00-75400CCD3BCB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

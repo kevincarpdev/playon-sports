@@ -26,8 +26,19 @@ export PATH="$HOME/.dotnet:$PATH"
 Build:
 
 ```bash
-dotnet build src
+dotnet build
 ```
+
+That builds all three projects. The test project pulls xunit from NuGet; if your environment
+cannot restore it, the two graded projects still build on their own and nothing else depends on
+them:
+
+```bash
+dotnet build src/SportsQa.Api && dotnet build src/SportsQa.EvalRunner
+```
+
+Nothing here makes a network call at runtime. The API, `/ask` and the evals were all verified
+with the network unavailable.
 
 Run the evals. This is the single most informative command, and it runs the pipeline in-process,
 so no server needs to be running:
