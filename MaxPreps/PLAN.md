@@ -34,9 +34,14 @@ Three properties we optimize for, in priority order:
 | 3 | `EvalRunner` — data-derived goldens, CI-gating exit code | High | ~30 min |
 | 4 | `FINDINGS.md` / `AI_NOTES.md` / `README.md` | Medium | ~20 min |
 
-**Hard time box: 3 hours**, ~45 min of it spent on recon and this plan. Anything past the
-box becomes a TODO list in `FINDINGS.md`, not half-finished code. Commit at each green
-checkpoint.
+**Hard time box: 3 hours**, ~45 min of it spent on recon and this plan. Anything past the box
+becomes a TODO list in `FINDINGS.md`, not half-finished code. Commit at each green checkpoint.
+
+> **Retrospective note.** The build landed at 2h54m (07:52–10:46 in the history). A separate
+> session afterwards ran a multi-model adversarial review and fixed what it found — six SQL-guard
+> bypasses and four wrong claims in my own documentation. That work is deliberately a distinct
+> block after a visible gap rather than folded into the build. See `SUMMARY.md` and
+> `FINDINGS.md` §5.
 
 Scope calls made deliberately, because the brief lists auth/UI/deployment under *what we
 don't care about*: RBAC ships as **tool-grant policy** (it is the model-trust problem, and
