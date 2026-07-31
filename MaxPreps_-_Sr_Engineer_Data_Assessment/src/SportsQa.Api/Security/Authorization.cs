@@ -23,6 +23,9 @@ public sealed record Principal(Role Role)
 /// <summary>
 /// What a role is allowed to read. Table-level is the right granularity here: the sensitive
 /// distinction in this dataset is aggregate team facts versus per-player and per-game detail.
+///
+/// On Postgres this belongs in row-level security so a bug in the guard cannot leak paid data
+/// — application checks stay for fast, friendly refusals. See PRODUCTION_NOTES.md §5.3.
 /// </summary>
 public sealed record RoleGrant(IReadOnlySet<string> Tables, int MaxRows, bool AllowOpsIntents)
 {

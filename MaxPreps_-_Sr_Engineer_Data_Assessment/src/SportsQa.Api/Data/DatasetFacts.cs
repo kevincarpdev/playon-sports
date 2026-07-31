@@ -7,6 +7,10 @@ namespace SportsQa.Api.Data;
 /// Facts about coverage, read from the data at startup. Sports and seasons are never
 /// hardcoded, so adding a season or a sport changes no code — and the clarification options
 /// the caller sees stay in step with what actually exists.
+///
+/// At MaxPreps scale coverage is faceted by state, level (varsity/JV/freshman) and gender as
+/// well, and this is where those dimensions would be read from. See PRODUCTION_NOTES.md §2.1:
+/// "how many wins does this program have" is unanswerable without a level.
 /// </summary>
 public sealed class DatasetFacts
 {

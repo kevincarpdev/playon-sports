@@ -25,8 +25,14 @@ public sealed record EntityMatch(
 /// read from the database at startup rather than hardcoded, so a new sport or season needs
 /// no code change.
 ///
-/// At production scale the lexicon becomes a search index instead of an in-memory list;
-/// the interface here is deliberately the same shape.
+/// At production scale the lexicon becomes a search index instead of an in-memory list; the
+/// interface here is deliberately the same shape. Concretely that means Postgres pg_trgm over
+/// a materialized view, plus a curated alias table for the nicknames fans actually type
+/// ("Bosco", "SJB"). See PRODUCTION_NOTES.md §4.
+///
+/// Worth noting what this component really is: entity linking. The same index should back site
+/// search autocomplete and the chatbot's slot filling — one artifact, two consumers. The
+/// subsumption and shadowing rules below are exactly the disambiguation a search box needs.
 /// </summary>
 public sealed class SchemaCatalog
 {
