@@ -11,3 +11,4 @@ obj/
 # Generated review artifact
 review-bundle.md
 review-part*.md
+focus-*.md
