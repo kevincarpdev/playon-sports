@@ -20,35 +20,38 @@ location, add it to your PATH:
 export PATH="$HOME/.dotnet:$PATH"
 ```
 
-Then build:
+**Every command below runs from this directory** — the package root, containing `src/` and
+`data/`. Each block is independent, so paths don't chain.
+
+Build:
 
 ```bash
-cd src && dotnet build
+dotnet build src
 ```
+
+Run the evals — the single most informative command. It runs the pipeline in-process, so no
+server needs to be running:
+
+```bash
+dotnet run --project src/SportsQa.EvalRunner
+```
+
+Exits `0` when all 20 goldens pass, non-zero otherwise, so it gates CI.
 
 Run the API:
 
 ```bash
-cd src/SportsQa.Api && dotnet run
+dotnet run --project src/SportsQa.Api
 ```
 
-Health check (in another terminal):
+Health check, from another terminal:
 
 ```bash
 curl http://localhost:5000/health
 ```
 
-Run the evals — this is the one command that exercises everything:
-
-```bash
-cd src/SportsQa.EvalRunner && dotnet run
-```
-
-Exits `0` when all 20 goldens pass, non-zero otherwise, so it gates CI. It runs the pipeline
-in-process, so no server needs to be running.
-
-To test the HTTP surface instead — every outcome, status code and authorization boundary —
-start the API and run:
+Test the HTTP surface — every outcome, status code and authorization boundary. Needs the API
+running:
 
 ```bash
 ./smoke.sh
@@ -56,6 +59,29 @@ start the API and run:
 
 The evals prove the *answers* are right; the smoke test proves the *endpoint* behaves. Both
 exit non-zero on failure.
+
+### If port 5000 is unavailable
+
+Two common causes on macOS. Check what holds it:
+
+```bash
+lsof -nP -iTCP:5000 -sTCP:LISTEN
+```
+
+- **`ControlCe`** — Control Center's AirPlay Receiver squats on port 5000. Either disable
+  AirPlay Receiver in System Settings → General → AirDrop & Handoff, or use another port.
+- **`SportsQa.Api`** — you already have an instance running in another terminal. Reuse it, or
+  stop it with `pkill -f SportsQa.Api`.
+
+To use a different port, pass it to both the API and the smoke test:
+
+```bash
+dotnet run --project src/SportsQa.Api --urls http://localhost:5099
+```
+
+```bash
+BASE=http://localhost:5099 ./smoke.sh
+```
 
 ## Try it
 
