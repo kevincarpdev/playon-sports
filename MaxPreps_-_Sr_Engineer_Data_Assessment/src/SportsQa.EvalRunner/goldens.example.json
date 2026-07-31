@@ -1,0 +1,22 @@
+{
+  "goldens": [
+    {
+      "id": "team-count",
+      "question": "How many teams are in the database?",
+      "expected": {
+        "kind": "scalar",
+        "value": 16
+      },
+      "rationale": "Verified by hand: SELECT COUNT(*) FROM teams."
+    },
+    {
+      "id": "tony-jackson-touchdowns",
+      "question": "How many touchdowns did Tony Jackson score this season?",
+      "expected": {
+        "kind": "scalar",
+        "value": 15
+      },
+      "rationale": "Ground truth computed independently from player_game_stats.td. Note: the assistant's response to this question may or may not produce this number. That is the point of the eval."
+    }
+  ]
+}

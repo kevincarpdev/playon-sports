@@ -1,0 +1,123 @@
+{
+  "responses": [
+    {
+      "question": "How many teams are in the database?",
+      "intent": "count_teams",
+      "sql": "SELECT COUNT(*) AS team_count FROM teams;",
+      "confidence": 0.98,
+      "notes": "Simple count over the teams table."
+    },
+    {
+      "question": "Who scored the most points in basketball during the 2025-26 season?",
+      "intent": "top_scorer_basketball",
+      "sql": "SELECT p.first_name || ' ' || p.last_name AS player, SUM(s.points) AS total_points FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE g.sport = 'Basketball' AND g.season = '2025-26' GROUP BY s.player_id ORDER BY total_points DESC LIMIT 1;",
+      "confidence": 0.95,
+      "notes": "Sums per-game points for basketball games in the 2025-26 season."
+    },
+    {
+      "question": "List the top 5 basketball scorers.",
+      "intent": "top5_scorers_basketball",
+      "sql": "SELECT p.first_name || ' ' || p.last_name AS player, SUM(s.points) AS total_points FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE g.sport = 'Basketball' GROUP BY s.player_id ORDER BY total_points DESC LIMIT 5;",
+      "confidence": 0.95,
+      "notes": "Top five by summed per-game points."
+    },
+    {
+      "question": "What is Derek Foss's total passing yards?",
+      "intent": "player_passing_yards",
+      "sql": "SELECT SUM(s.pass_yds) AS total_passing_yards FROM player_game_stats s JOIN players p ON p.player_id = s.player_id WHERE p.first_name = 'Derek' AND p.last_name = 'Foss';",
+      "confidence": 0.96,
+      "notes": "Sums pass_yds across all recorded games."
+    },
+    {
+      "question": "Which schools have teams in both football and basketball?",
+      "intent": "schools_both_sports",
+      "sql": "SELECT school FROM teams GROUP BY school HAVING COUNT(DISTINCT sport) = 2 ORDER BY school;",
+      "confidence": 0.97,
+      "notes": "Groups teams by school and requires both sports present."
+    },
+    {
+      "question": "Who had the most rebounds in a single game?",
+      "intent": "max_rebounds_single_game",
+      "sql": "SELECT p.first_name || ' ' || p.last_name AS player, s.rebounds FROM player_game_stats s JOIN players p ON p.player_id = s.player_id JOIN games g ON g.game_id = s.game_id ORDER BY s.rebounds DESC LIMIT 1;",
+      "confidence": 0.94,
+      "notes": "Single-game maximum of the rebounds column."
+    },
+    {
+      "question": "What was the highest scoring football game?",
+      "intent": "highest_scoring_game",
+      "sql": "SELECT game_id, game_date, home_score + away_score AS total_points FROM games WHERE sport = 'Football' ORDER BY total_points DESC LIMIT 1;",
+      "confidence": 0.95,
+      "notes": "Orders football games by combined score."
+    },
+    {
+      "question": "How many players are on the Oak Hill football roster?",
+      "intent": "roster_count",
+      "sql": "SELECT COUNT(*) AS player_count FROM players p JOIN teams t ON t.team_id = p.team_id WHERE t.school = 'Oak Hill' AND t.sport = 'Football';",
+      "confidence": 0.97,
+      "notes": "Counts players attached to the Oak Hill football team."
+    },
+    {
+      "question": "What was Marcus Bell's average points per game this season?",
+      "intent": "player_avg_ppg",
+      "sql": "SELECT CAST(pst.points AS REAL) / pst.games_played AS avg_points_per_game FROM player_season_totals pst JOIN players p ON p.player_id = pst.player_id WHERE p.first_name = 'Marcus' AND p.last_name = 'Bell';",
+      "confidence": 0.93,
+      "notes": "Uses the pre-aggregated season totals table for efficiency."
+    },
+    {
+      "question": "How many total points has Marcus Bell scored this season?",
+      "intent": "player_total_points",
+      "sql": "SELECT pst.points AS total_points FROM player_season_totals pst JOIN players p ON p.player_id = pst.player_id WHERE p.first_name = 'Marcus' AND p.last_name = 'Bell';",
+      "confidence": 0.94,
+      "notes": "Reads directly from the season totals rollup."
+    },
+    {
+      "question": "How many touchdowns did Tony Jackson score this season?",
+      "intent": "player_touchdowns",
+      "sql": "SELECT SUM(s.touchdowns) AS total_touchdowns FROM player_game_stats s JOIN players p ON p.player_id = s.player_id WHERE p.first_name = 'Tony' AND p.last_name = 'Jackson';",
+      "confidence": 0.91,
+      "notes": "Sums the touchdowns column for the player."
+    },
+    {
+      "question": "How many games did Jackson Prep win in the 2025 football season?",
+      "intent": "team_wins",
+      "sql": "SELECT COUNT(*) AS wins FROM games g JOIN teams t ON (t.team_id = g.home_team_id AND g.home_score > g.away_score) OR (t.team_id = g.away_team_id AND g.away_score > g.home_score) WHERE t.school = 'Jackson Prep' AND t.sport = 'Football' AND g.season = '2025';",
+      "confidence": 0.94,
+      "notes": "Counts games where Jackson Prep's score was higher."
+    },
+    {
+      "question": "How many points did Jackson score this season?",
+      "intent": "entity_points",
+      "sql": "SELECT SUM(CASE WHEN g.home_team_id = t.team_id THEN g.home_score ELSE g.away_score END) AS total_points FROM games g JOIN teams t ON t.team_id IN (g.home_team_id, g.away_team_id) WHERE t.school = 'Jackson Prep' AND t.sport = 'Football';",
+      "confidence": 0.9,
+      "notes": "Interpreted 'Jackson' as the Jackson Prep football team."
+    },
+    {
+      "question": "How many injuries were reported for Riverside this season?",
+      "intent": "team_injuries",
+      "sql": "SELECT COUNT(*) AS injury_count FROM injuries i JOIN teams t ON t.team_id = i.team_id WHERE t.school = 'Riverside';",
+      "confidence": 0.88,
+      "notes": "Counts rows in the injuries table for the team."
+    },
+    {
+      "question": "Did Riverside beat Oak Hill this season?",
+      "intent": "head_to_head",
+      "sql": "SELECT g.game_date, g.home_score, g.away_score FROM games g JOIN teams h ON h.team_id = g.home_team_id JOIN teams a ON a.team_id = g.away_team_id WHERE h.school = 'Riverside AND a.school = 'Oak Hill';",
+      "confidence": 0.9,
+      "notes": "Fetches head-to-head results between the two schools."
+    },
+    {
+      "question": "Who is the best player?",
+      "intent": "best_player",
+      "sql": "SELECT p.first_name || ' ' || p.last_name AS player, SUM(s.points) AS total_points FROM player_game_stats s JOIN players p ON p.player_id = s.player_id GROUP BY s.player_id ORDER BY total_points DESC LIMIT 1;",
+      "confidence": 0.95,
+      "notes": "The best player is the one with the most total points."
+    },
+    {
+      "question": "Who scored the most points this season?",
+      "intent": "top_scorer_overall",
+      "sql": "SELECT p.first_name || ' ' || p.last_name AS player, SUM(s.points) AS total_points FROM player_game_stats s JOIN players p ON p.player_id = s.player_id GROUP BY s.player_id ORDER BY total_points DESC LIMIT 1;",
+      "confidence": 0.92,
+      "notes": "Sums points across all recorded stats."
+    }
+  ]
+}

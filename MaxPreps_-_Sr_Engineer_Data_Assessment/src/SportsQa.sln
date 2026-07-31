@@ -1,0 +1,22 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.Api", "SportsQa.Api\SportsQa.Api.csproj", "{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SportsQa.EvalRunner", "SportsQa.EvalRunner\SportsQa.EvalRunner.csproj", "{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A64A1C3-9E7B-4E45-B6A1-0F2D3C4B5A61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B75B2D4-AF8C-4F56-C7B2-1A3E4D5C6B72}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
