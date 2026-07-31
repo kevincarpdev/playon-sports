@@ -43,8 +43,18 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
         // ourselves instead of asking a question the data already settles.
         foreach (var slot in plan.RequiredSlots.OrderBy(SlotOrder))
         {
+            // A caller-supplied slot is untrusted input, not a resolved fact. Taking it verbatim
+            // let an invalid value satisfy slot-completeness and then miss every certified
+            // template, falling through to the model's own SQL — producing exactly the
+            // cross-sport, tie-blind answer the certified templates exist to prevent.
             if (supplied.TryGetValue(slot, out var answered) && !string.IsNullOrWhiteSpace(answered))
             {
+                if (!IsAcceptable(slot, answered))
+                {
+                    clarifications.Add(BuildClarification(slot, question, plan, schools));
+                    continue;
+                }
+
                 values[slot] = answered;
                 continue;
             }
@@ -71,6 +81,19 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
 
         return new SlotResolution(values, clarifications);
     }
+
+    /// <summary>
+    /// Whether a caller-supplied slot value is one we recognise. Every slot in this dataset has
+    /// a closed domain — sports and entities come from the data, metrics from a fixed set — so
+    /// an unrecognised value is rejected rather than passed downstream.
+    /// </summary>
+    private bool IsAcceptable(string slot, string value) => slot switch
+    {
+        Slots.Sport => facts.Sports.Contains(value, StringComparer.OrdinalIgnoreCase),
+        Slots.Metric => Metric.Find(value) is not null,
+        Slots.Entity or Slots.SchoolA or Slots.SchoolB => catalog.IsKnownEntity(value),
+        _ => false,
+    };
 
     /// <summary>
     /// Sport comes from the intent, then the question text, then the resolved entity. The last
