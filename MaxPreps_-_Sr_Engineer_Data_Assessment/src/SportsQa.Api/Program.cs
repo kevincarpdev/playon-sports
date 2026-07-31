@@ -60,6 +60,16 @@ app.MapPost("/ask", async (
 {
     var principal = principals.Resolve(context.Request.Headers);
 
+    // A missing question is a malformed request, not a limitation of the data — so it is a 400
+    // rather than the 422 we use when the dataset genuinely cannot answer.
+    if (string.IsNullOrWhiteSpace(request?.Question))
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["question"] = ["A non-empty question is required."],
+        });
+    }
+
     try
     {
         var response = await pipeline.AskAsync(request, principal, cancellationToken);
