@@ -74,9 +74,10 @@ There are two suites. The important one is **24 answer tests where the expected 
 queries I wrote myself**, never from the system's own output. Otherwise you just lock in whatever
 it currently does, including the mistakes. Twenty record the query that proves their number, so
 anyone can re-check it by pasting one line. The other four assert that the system refuses or asks
-rather than answers, where there is no number to derive. Underneath sits a second suite of **42
-unit tests** on the query safety layer: 26 on `SqlGuard` itself, and 16 hostile-input cases
-covering prompt injection, jailbreaks, SQL injection through slots, and privilege escalation.
+rather than answers, where there is no number to derive. Underneath sits a second suite of **55
+unit tests** on the query safety layer: 26 on `SqlGuard` itself, and 29 hostile-input cases
+covering prompt injection, jailbreaks, SQL injection through every caller-supplied slot, and
+privilege escalation.
 
 Both run automatically on every change, and one step deliberately breaks a test to confirm the
 suite can still catch a problem. A test suite that can't fail isn't protecting anything.
@@ -140,17 +141,23 @@ executed command.
 
 Three layers, tested rather than assumed:
 
-- **Prompt injection and jailbreak framing.** Instruction overrides, "developer mode", fake
-  SYSTEM messages, claiming to be an admin, and injection appended to an otherwise valid
-  question. All refused. A poisoned question does not get partially honoured.
-- **SQL injection.** Every value a caller can supply is checked against a closed set taken from
-  the data itself, so `'; DROP TABLE teams;--` is rejected as "not a school I recognise" before
-  any query exists. Values that survive reach the database as bound parameters, never as text.
+- **Prompt injection and jailbreak framing.** Instruction overrides, "developer mode", DAN mode,
+  fake SYSTEM / `[[ADMIN OVERRIDE]]` messages, "reveal your system prompt / SEMANTIC_MODEL",
+  claiming to be an admin in the sentence, and injection appended to an otherwise valid
+  question. All refused. A poisoned question does not get partially honoured, and claiming
+  admin in the text does not change the role recorded in diagnostics.
+- **SQL injection.** Every caller-supplied slot (`entity`, `sport`, `metric`, `school_a`,
+  `school_b`) is checked against a closed set taken from the data itself, so
+  `'; DROP TABLE teams;--` is rejected as "not a school I recognise" before any query
+  exists. `AllowOther: true` on metric clarifications is UX only — the server still rejects
+  anything outside the closed set. Values that survive reach the database as bound parameters,
+  never as text.
 - **Privilege escalation.** Asking to be treated as an admin does nothing, because permission
-  comes from the request, not the sentence. Internal functions are refused as *unrecognised*
-  rather than *forbidden*, so you cannot map the internal surface by watching error codes change.
+  comes from the request header, not the sentence. Anonymous and Member both cannot reach
+  per-game stats. Internal ops functions are refused as *unrecognised* rather than
+  *forbidden*, so you cannot map the internal surface by watching error codes change.
 
-Sixteen of the automated tests are hostile inputs, including one that re-counts every table
+Twenty-nine of the automated tests are hostile inputs, including one that re-counts every table
 afterwards to confirm nothing was modified. The database connection is also opened read-only at
 the driver level, so even a bug in the layers above cannot write.
 

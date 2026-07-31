@@ -203,7 +203,7 @@ src/SportsQa.Api/
 
 src/SportsQa.Tests/
   SqlGuardTests.cs   26 tests on the validation boundary, incl. every known bypass
-  InjectionTests.cs  16 tests: prompt injection, jailbreaks, SQL injection, escalation
+  InjectionTests.cs  29 tests: prompt injection, jailbreaks, SQL injection, escalation
 
 src/SportsQa.EvalRunner/
   goldens.json     24 goldens across 16 failure classes, 20 with groundTruthSql

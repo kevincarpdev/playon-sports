@@ -72,8 +72,8 @@ no review, because they read as authoritative.
 `.github/workflows/ci.yml` runs six gates on every PR, all offline:
 
 1. Build clean.
-2. The 42 unit tests pass: every `SqlGuard` bypass an adversarial review found, plus hostile
-   inputs (prompt injection, jailbreaks, SQL injection through slots, privilege escalation).
+2. The 55 unit tests pass: every `SqlGuard` bypass an adversarial review found, plus hostile
+   inputs (prompt injection, jailbreaks, SQL injection through every slot, privilege escalation).
 3. The 24 goldens pass, a regression in *answer correctness* fails the merge.
 4. A deliberately corrupted golden must fail. This guards the guard: a suite that cannot go red
    gates nothing, and that degradation is silent.
