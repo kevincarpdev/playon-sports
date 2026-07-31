@@ -127,7 +127,7 @@ golden I needed an exact count and ran `COUNT(*) WHERE rebounds = 12`: **52 stat
 "at least 5"; an assertion did not. That's an argument for writing evals early — they're a
 forcing function on your own sloppiness, not just a regression net.
 
-I corrected `SEMANTIC_MODEL.md` and `PLAN.md`, and added §6.9 on clipped columns.
+I corrected `SEMANTIC_MODEL.md` and `PLAN.md`, and added §6.8 on clipped columns.
 
 ### 2. It silently resolved "Jackson" to a city
 

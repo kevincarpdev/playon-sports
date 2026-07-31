@@ -359,10 +359,14 @@ same lexicon powers site autocomplete and chatbot slot filling. PRODUCTION_NOTES
 
 ### Known limitations I am not treating as bugs
 
-- **Goldens are broad but shallow** — one or two per failure class across 16 classes. Good
-  regression coverage, not a substitute for fuzzing.
-- **Three goldens have no `groundTruthSql`** because they assert refusal or clarification
-  behaviour rather than a value. Nothing in the data to derive.
+- **Goldens are broad but shallow** — 24 across 16 failure classes, most classes carrying one
+  or two. Only `clarification-loop-closes` (4) and `untrusted-slot-input` (3) go deeper, and
+  both earned it by being where a real bug got through. Good regression coverage, not a
+  substitute for fuzzing.
+- **Four goldens have no `groundTruthSql`** — `best-player-subjective`,
+  `unsupported-question`, `anonymous-denied-player-stats` and `rejects-unknown-metric-slot` —
+  because they assert refusal, clarification or slot-rejection behaviour rather than a value.
+  Nothing in the data to derive.
 - **`Verifier` asserts on the first row only**, leaning on `rowCount` and `isTie` to catch
   ordering regressions.
 - **Certified templates interpolate `Metric.Expression` and column names.** Safe because

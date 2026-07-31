@@ -74,8 +74,10 @@ This is the single highest-value schema change I'd push for.
 
 ### 2.3 Wins are not `home_score > away_score`
 
-Our `TeamWins` template computes exactly that, and it's correct for this dataset (0 ties, 0
-forfeits). In production it's wrong:
+Our `TeamWins` template computes exactly that. It is correct for football in this dataset, which
+has no drawn games and no forfeits — but note that **four basketball games here are tied**
+(FINDINGS §1.7), so `>` already silently drops results rather than counting them as draws. In
+production it is worse:
 
 - **Forfeits** — a team can win without playing; the score may be 0–0, 1–0, or 2–0 by state
   convention.
@@ -137,7 +139,7 @@ transfer mid-season, play two sports, and repeat grades. MaxPreps tracks athlete
 IDs precisely because an athlete outlives any one roster.
 
 Our `player_season_totals` PK of `(player_id, season)` already can't hold a two-sport athlete
-(FINDINGS §1.7). Transfers make it worse: one athlete, one season, two schools.
+(FINDINGS §1.10). Transfers make it worse: one athlete, one season, two schools.
 
 **Fix:** an `athlete` entity plus an `enrollment` fact (`athlete_id`, `team_id`, `date_from`,
 `date_to`). Stats join through enrollment, so "his numbers at his previous school" becomes
@@ -404,13 +406,16 @@ The most dangerous change in this system is not a code change. It is someone edi
 it silently alters what every answer *means* with no compile error and no test failure.
 
 That is why the goldens run in CI (`.github/workflows/ci.yml`). A semantic-model edit that
-changes an answer fails the merge. Three gates, all offline:
+changes an answer fails the merge. Six gates, all offline:
 
 1. Build clean.
-2. The 20 goldens pass, with expected values derived from the data rather than from the system.
-3. **A deliberately corrupted golden must fail.** This is the one people skip. A suite that
+2. The 26 unit tests pass, covering every known `SqlGuard` bypass.
+3. The 24 goldens pass, with expected values derived from the data rather than from the system.
+4. **A deliberately corrupted golden must fail.** This is the one people skip. A suite that
    cannot go red gates nothing, and it degrades silently — so the pipeline proves its own
    teeth on every run.
+5. The API starts and reports healthy.
+6. `smoke.sh` passes over real HTTP, covering every outcome and authorization boundary.
 
 At PlayOn scale this becomes per-sport golden suites, each gating its own certified query
 library, with the freshness and verification dimensions (§2.4) asserted as part of the suite

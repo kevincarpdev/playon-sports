@@ -203,7 +203,7 @@ src/SportsQa.Tests/
   SqlGuardTests.cs 26 tests on the validation boundary, incl. every known bypass
 
 src/SportsQa.EvalRunner/
-  goldens.json     24 goldens across 16 failure classes, each with its groundTruthSql
+  goldens.json     24 goldens across 16 failure classes, 20 with groundTruthSql
 ```
 
 `data/` is unchanged from the original package.
