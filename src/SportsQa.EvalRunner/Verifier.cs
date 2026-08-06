@@ -69,16 +69,11 @@ public static class Verifier
                     : $"(absent; got: {Codes(response)})"));
         }
 
-        // TODO(contract): add a matching block for expect.SqlSource —
-        //     if (expect.SqlSource is not null)
-        //     {
-        //         checks.Add(Check("sql source", expect.SqlSource,
-        //             response.Diagnostics.SqlSource?.ToString() ?? "(none)"));
-        //     }
-        //
-        // Its own Check so a failure reports that the sql source drifted, rather than only that
-        // the golden broke. Without this block, a golden could declare sqlSource and silently
-        // assert nothing — which is worse than not having the field at all.
+        if (expect.SqlSource is not null)
+        {
+            checks.Add(Check("sql source", expect.SqlSource,
+                response.Diagnostics.SqlSource?.ToString() ?? "(none)"));
+        }
 
         return new Verdict(golden, checks);
     }

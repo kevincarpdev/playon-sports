@@ -396,6 +396,19 @@
       },
       "groundTruthSql": "SELECT SUM(s.pass_yds) AS pass_yds, COUNT(DISTINCT s.game_id) AS games FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE p.first_name || ' ' || p.last_name = 'Tony Jackson' AND g.sport = 'Football';",
       "rationale": "The second of the two kinds of nothing (SEMANTIC_MODEL.md 6.5.1). Tony Jackson has 7 games of records but NULL passing yards because he is a running back, so this is 'not applicable to the position', not 'untracked'. games_played above zero is what distinguishes the two."
+    },
+    {
+      "id": "team-count-uses-model-sql",
+      "failureClass": "model-sql-guarded",
+      "question": "How many teams are in the database?",
+      "expect": {
+        "outcome": "Answered",
+        "column": "team_count",
+        "value": 16,
+        "sqlSource": "Model"
+      },
+      "groundTruthSql": "SELECT COUNT(*) FROM teams;",
+      "rationale": "Proves the PreferModelSql path is real for a slotless intent whose recorded SQL was verified. Value stays 16; sqlSource must be Model, not Certified."
     }
   ]
 }
