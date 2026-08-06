@@ -39,6 +39,10 @@ public static class IntentCatalog
     private const string Basketball = "Basketball";
     private const string Football = "Football";
 
+    // PreferModelSql is set on four intents — count_teams, top_scorer_basketball, roster_count
+    // and team_wins — because those are the four whose recorded SQL I executed against the
+    // database and found correct (FINDINGS §2).
+    //
     // Everything else keeps its certified template, because forensics showed the model's SQL
     // reads the stale rollup, cuts ties with LIMIT 1, invents a `touchdowns` column, or
     // silently guesses an entity.
