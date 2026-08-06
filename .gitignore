@@ -12,3 +12,8 @@ obj/
 review-bundle.md
 review-part*.md
 focus-*.md
+
+# Local interview prep — not part of the submission
+CUSTOM_INSTRUCTIONS.md
+DRILLS.md
+LIVE_CHEATSHEET.md
