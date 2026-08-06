@@ -39,9 +39,17 @@ public static class IntentCatalog
     private const string Basketball = "Basketball";
     private const string Football = "Football";
 
-    // PreferModelSql is set on four intents — count_teams, top_scorer_basketball, roster_count
-    // and team_wins — because those are the four whose recorded SQL I executed against the
-    // database and found correct (FINDINGS §2).
+    // PreferModelSql requires two things, not one. "The model got this right when I ran it" is
+    // necessary and not sufficient.
+    //
+    //   1. I executed the recorded SQL against the database and it was correct (FINDINGS §2).
+    //   2. The intent declares no required slots.
+    //
+    // Condition 2 is the one I originally missed. The recorded SQL interpolates its filters as
+    // literals — roster_count hardcodes 'Oak Hill', team_wins hardcodes 'Jackson Prep' — so a
+    // static recorded query cannot respond to caller input at all. Flagging team_wins made
+    // "how many games did Oak Hill win" return 3, which is Jackson Prep's total, with no error.
+    // A pre-existing injection test caught it. IntentPolicyTests now enforces the invariant.
     //
     // Everything else keeps its certified template, because forensics showed the model's SQL
     // reads the stale rollup, cuts ties with LIMIT 1, invents a `touchdowns` column, or
@@ -69,11 +77,11 @@ public static class IntentCatalog
 
         ["roster_count"] = new("roster_count",
             Capability.ScalarQuery, [Slots.Entity, Slots.Sport],
-            EntityKind: EntityKinds.School, PreferModelSql: true),
+            EntityKind: EntityKinds.School),
 
         ["team_wins"] = new("team_wins",
             Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
-            EntityKind: EntityKinds.School, PreferModelSql: true),
+            EntityKind: EntityKinds.School),
 
         ["player_passing_yards"] = new("player_passing_yards",
             Capability.AggregateQuery, [Slots.Entity],
@@ -134,6 +142,12 @@ public static class IntentCatalog
                     "rosters, game results and per-game player stat lines."));
 
     public static bool IsKnown(string intent) => Plans.ContainsKey(intent);
+
+    /// <summary>
+    /// Every declared plan, so policy invariants can be asserted across the whole catalog rather
+    /// than on the intents someone remembered to check. See IntentPolicyTests.
+    /// </summary>
+    public static IReadOnlyCollection<IntentPlan> All => Plans.Values;
 
     /// <summary>Ops intents are namespaced so unprivileged callers cannot enumerate them.</summary>
     public static bool IsOpsIntent(string intent) =>

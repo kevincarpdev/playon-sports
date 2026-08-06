@@ -227,13 +227,51 @@ public sealed class InjectionTests
     // Positive control + integrity
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// The positive control for the parameterised path. This asks a question whose filters come
+    /// from caller-supplied slots, so it must be served by a certified template where those
+    /// values arrive as bound parameters — never by recorded model SQL, which bakes its filters
+    /// in as literals and would answer about whichever school the recording happened to name.
+    /// </summary>
     [Fact]
     public async Task A_legitimate_answer_still_comes_from_a_certified_parameterised_query()
+    {
+        var response = await Ask("How many players are on the Oak Hill football roster?",
+            new Dictionary<string, string> { ["entity"] = "Oak Hill", ["sport"] = "Football" });
+
+        Assert.Equal(AskOutcome.Answered, response.Outcome);
+        Assert.Equal(12, Convert.ToInt32(response.Answer!.Scalar));
+        Assert.Equal(SqlSource.Certified, response.Diagnostics?.SqlSource);
+    }
+
+    /// <summary>
+    /// The model-authored path, which is granted only to slotless intents whose recorded SQL was
+    /// executed and verified. It must still be validated, still report the right number, and
+    /// still be labelled honestly so a caller can tell who wrote the query.
+    /// </summary>
+    [Fact]
+    public async Task A_model_authored_answer_is_validated_and_labelled_as_such()
     {
         var response = await Ask("How many teams are in the database?");
 
         Assert.Equal(AskOutcome.Answered, response.Outcome);
         Assert.Equal(16, Convert.ToInt32(response.Answer!.Scalar));
+        Assert.Equal(SqlSource.Model, response.Diagnostics?.SqlSource);
+    }
+
+    /// <summary>
+    /// A slot-taking intent must answer about the school that was asked for. Recorded model SQL
+    /// hardcodes 'Jackson Prep' here, so if this route ever loses its certified template, asking
+    /// about Oak Hill returns 3 (Jackson Prep's total) instead of 4, with no error raised.
+    /// </summary>
+    [Fact]
+    public async Task A_slot_taking_intent_answers_about_the_school_that_was_asked_for()
+    {
+        var response = await Ask("How many games did Jackson Prep win in the 2025 football season?",
+            new Dictionary<string, string> { ["entity"] = "Oak Hill", ["sport"] = "Football" });
+
+        Assert.Equal(AskOutcome.Answered, response.Outcome);
+        Assert.Equal(4, Convert.ToInt32(response.Answer!.Scalar));
         Assert.Equal(SqlSource.Certified, response.Diagnostics?.SqlSource);
     }
 

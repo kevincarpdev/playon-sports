@@ -174,15 +174,10 @@ public sealed class QuestionPipeline(
     /// </summary>
     private CertifiedQuery? BuildCertified(IntentPlan plan, IReadOnlyDictionary<string, string> slots)
     {
-        // TODO(contract): make this the first statement in the method —
-        //     if (plan.PreferModelSql) return null;
-        //
-        // Returning null is already the signal ExecuteAsync uses to fall back to the model's
-        // SQL, so this reuses the existing path rather than adding a second one. Everything
-        // that protects us runs after this point and is unchanged: SqlGuard validates the
-        // model's SQL against the live schema and the role's table allow-list, the row cap and
-        // timeout still apply, and Score() already caps model-sourced answers at
-        // ModelQueryConfidenceCap (0.70) rather than the certified 0.99.
+        if (plan.PreferModelSql) return null;
+
+        // Reuses the same null-means-fall-back signal ExecuteAsync already handles, so
+        // opted-out intents go through the identical guarded model-SQL path as unrecognised ones.
         var sport = Slot(slots, Slots.Sport) ?? plan.FixedSport;
         var entity = Slot(slots, Slots.Entity);
         var metric = Metric.Find(Slot(slots, Slots.Metric) ?? plan.FixedMetric?.Key ?? "");
