@@ -412,7 +412,7 @@ changes an answer fails the merge. Six gates, all offline:
 1. Build clean.
 2. The 55 unit tests pass: every known `SqlGuard` bypass, plus hostile-input coverage
    (prompt injection, jailbreaks, SQL injection through every slot, privilege escalation).
-3. The 24 goldens pass, with expected values derived from the data rather than from the system.
+3. The 28 goldens pass, with expected values derived from the data rather than from the system.
 4. **A deliberately corrupted golden must fail.** This is the one people skip. A suite that
    cannot go red gates nothing, and it degrades silently, so the pipeline proves its own
    teeth on every run.

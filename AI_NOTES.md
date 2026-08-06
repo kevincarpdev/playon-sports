@@ -74,7 +74,7 @@ no review, because they read as authoritative.
 1. Build clean.
 2. The 55 unit tests pass: every `SqlGuard` bypass an adversarial review found, plus hostile
    inputs (prompt injection, jailbreaks, SQL injection through every slot, privilege escalation).
-3. The 24 goldens pass, a regression in *answer correctness* fails the merge.
+3. The 28 goldens pass, a regression in *answer correctness* fails the merge.
 4. A deliberately corrupted golden must fail. This guards the guard: a suite that cannot go red
    gates nothing, and that degradation is silent.
 5. The API starts and reports healthy.

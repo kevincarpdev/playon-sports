@@ -47,7 +47,7 @@ so no server needs to be running:
 dotnet run --project src/SportsQa.EvalRunner
 ```
 
-Exits `0` when all 24 goldens pass, non-zero otherwise, so it gates CI.
+Exits `0` when all 28 goldens pass, non-zero otherwise, so it gates CI.
 
 Run the API:
 
@@ -218,7 +218,7 @@ src/SportsQa.Tests/
   InjectionTests.cs  29 tests: prompt injection, jailbreaks, SQL injection, escalation
 
 src/SportsQa.EvalRunner/
-  goldens.json     24 goldens across 16 failure classes, 20 with groundTruthSql
+  goldens.json     28 goldens across 18 failure classes, 24 with groundTruthSql
 ```
 
 `data/` is unchanged from the original package.

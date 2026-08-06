@@ -260,19 +260,19 @@ cost; at scale it becomes a retrieval step returning only relevant sections.
 
 ## 4. Eval harness
 
-`SportsQa.EvalRunner` runs **24 goldens** through the real pipeline **in-process**, no server,
+`SportsQa.EvalRunner` runs **28 goldens** through the real pipeline **in-process**, no server,
 no ports, no network. One command, exit code 0/1, so it gates CI.
 
 Design choices that matter:
 
-- **Expected values come from my own queries**, never the model. Twenty of the 24 record a
+- **Expected values come from my own queries**, never the model. Twenty-four of the 28 record a
   `groundTruthSql` so a reviewer can re-derive any number in one paste. The other four assert
   refusal, clarification or slot-rejection behaviour, where there is no value to derive.
-- **Organised by failure class**, not by question. 16 classes: `baseline`, `model-is-correct`,
+- **Organised by failure class**, not by question. 18 classes: `baseline`, `model-is-correct`,
   `grain`, `join-correctness`, `model-hallucinated-column`, `stale-rollup`, `ranking`,
   `unreported-tie`, `nonexistent-table`, `subjective`, `sport-ambiguity`,
-  `clarification-loop-closes`, `entity-ambiguity`, `out-of-scope`, `authorization`, and
-  `untrusted-slot-input`.
+  `clarification-loop-closes`, `entity-ambiguity`, `out-of-scope`, `authorization`,
+  `untrusted-slot-input`, `entity-kind-mismatch`, and `null-is-not-zero`.
 - **Per-assertion reporting.** A failure says *which property* drifted, with expected vs
   actual, the pipeline's intent/tier/sql-source, and the verification SQL.
 - **Verified it can fail.** I flipped `marcus-bell-points` to 165 and `most-rebounds-tie` to

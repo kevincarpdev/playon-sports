@@ -70,11 +70,11 @@ care most about getting right.
 
 ## How I checked my own work
 
-There are two suites. The important one is **24 answer tests where the expected values come from
+There are two suites. The important one is **28 answer tests where the expected values come from
 queries I wrote myself**, never from the system's own output. Otherwise you just lock in whatever
-it currently does, including the mistakes. Twenty record the query that proves their number, so
-anyone can re-check it by pasting one line. The other four assert that the system refuses or asks
-rather than answers, where there is no number to derive. Underneath sits a second suite of **55
+it currently does, including the mistakes. Twenty-four record the query that proves their number,
+so anyone can re-check it by pasting one line. The other four assert that the system refuses or
+asks rather than answers, where there is no number to derive. Underneath sits a second suite of **55
 unit tests** on the query safety layer: 26 on `SqlGuard` itself, and 29 hostile-input cases
 covering prompt injection, jailbreaks, SQL injection through every caller-supplied slot, and
 privilege escalation.
@@ -220,7 +220,7 @@ only the time-boxed portion, everything up to 10:46 stands on its own.
 |---|---|
 | **Part 1**: the `/ask` endpoint | `src/SportsQa.Api`, walked through in `ARCHITECTURE.md` §2 |
 | **Part 2**: the semantic model | `SEMANTIC_MODEL.md` |
-| **Part 3**: the eval harness | `src/SportsQa.EvalRunner`, 24 goldens in `goldens.json` |
+| **Part 3**: the eval harness | `src/SportsQa.EvalRunner`, 28 goldens in `goldens.json` |
 | **Part 4**: the writeups | `FINDINGS.md` and `AI_NOTES.md` |
 | Optional real-model path | `ILlmClient` is the seam; deliberately not wired, so this runs with no key |
 
@@ -239,6 +239,6 @@ only the time-boxed portion, everything up to 10:46 stands on its own.
 Two commands to see it work:
 
 ```
-dotnet run --project src/SportsQa.EvalRunner     # 24 answer tests, all passing
+dotnet run --project src/SportsQa.EvalRunner     # 28 answer tests, all passing
 dotnet run --project src/SportsQa.Api            # then ./smoke.sh in another terminal
 ```
