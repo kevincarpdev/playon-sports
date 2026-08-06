@@ -22,7 +22,14 @@ public sealed record IntentPlan(
     /// filters on <c>teams.school</c>, so a player name fills the slot and matches nothing.
     /// Declared here so the resolver rejects the wrong kind instead of the query returning NULL.
     /// </summary>
-    string? EntityKind = null)
+    string? EntityKind = null,
+    /// <summary>
+    /// Whether the model authors the SQL for this intent instead of <see cref="CertifiedQueries"/>.
+    /// Set only where the recorded interpretation was executed and found correct, so trust is
+    /// calibrated per route by evidence rather than applied uniformly. This governs *who writes
+    /// the query*, not whether the question is answerable — that stays with <see cref="Refusal"/>.
+    /// </summary>
+    bool PreferModelSql = false)
 {
     public bool IsRefused => Refusal is not null;
 }
@@ -32,16 +39,20 @@ public static class IntentCatalog
     private const string Basketball = "Basketball";
     private const string Football = "Football";
 
+    // Everything else keeps its certified template, because forensics showed the model's SQL
+    // reads the stale rollup, cuts ties with LIMIT 1, invents a `touchdowns` column, or
+    // silently guesses an entity.
     private static readonly Dictionary<string, IntentPlan> Plans = new(StringComparer.OrdinalIgnoreCase)
     {
         ["count_teams"] = new("count_teams",
-            Capability.ScalarQuery, []),
+            Capability.ScalarQuery, [], PreferModelSql: true),
 
         ["schools_both_sports"] = new("schools_both_sports",
             Capability.AggregateQuery, []),
 
         ["top_scorer_basketball"] = new("top_scorer_basketball",
-            Capability.RankedQuery, [], FixedMetric: Metric.Find("points"), FixedSport: Basketball),
+            Capability.RankedQuery, [], FixedMetric: Metric.Find("points"), FixedSport: Basketball,
+            PreferModelSql: true),
 
         ["top5_scorers_basketball"] = new("top5_scorers_basketball",
             Capability.RankedQuery, [], FixedMetric: Metric.Find("points"), FixedSport: Basketball),
@@ -54,11 +65,11 @@ public static class IntentCatalog
 
         ["roster_count"] = new("roster_count",
             Capability.ScalarQuery, [Slots.Entity, Slots.Sport],
-            EntityKind: EntityKinds.School),
+            EntityKind: EntityKinds.School, PreferModelSql: true),
 
         ["team_wins"] = new("team_wins",
             Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
-            EntityKind: EntityKinds.School),
+            EntityKind: EntityKinds.School, PreferModelSql: true),
 
         ["player_passing_yards"] = new("player_passing_yards",
             Capability.AggregateQuery, [Slots.Entity],

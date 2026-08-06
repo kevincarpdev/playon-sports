@@ -41,4 +41,11 @@ public sealed record Expectation
     public string? HasCaveat { get; init; }
     public string? RefusalCode { get; init; }
     public List<string>? ClarificationSlots { get; init; }
+
+    // TODO(contract): add `public string? SqlSource { get; init; }`
+    //
+    // Accepts "Certified" or "Model", compared against Diagnostics.SqlSource. Optional like
+    // every other field here, so all 28 existing goldens are unaffected.
+    //
+    // Adding it here does nothing on its own — Verifier has to grow a matching check.
 }
