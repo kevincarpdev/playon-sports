@@ -310,6 +310,45 @@ ambiguous. My first version asked anyway; it was technically safe and felt stupi
 `teams` is one row per school per sport. 16 teams, 10 schools. I answer 16 and say so in the
 scope string, because the question asked about teams.
 
+### 3.7 Two defects found after submitting, and fixed
+
+Recorded as corrections rather than folded in quietly, same as everything else here. Both are
+the *same* bug class as §2's "plausible SQL, plausible number, wrong answer" — this time in my
+code rather than the model's.
+
+**A real name of the wrong kind was accepted as a slot value.** `SlotResolver.IsAcceptable`
+validated an entity with `catalog.IsKnownEntity(value)`, which asks "is this a name in the
+data" and not "is this the *kind* of name this query can match". `entity_points` filters on
+`teams.school`, so `entity: "Tony Jackson"` — a real player — passed validation, matched no
+rows, and came back as `Answered` at **0.99** with `points_for = null`. The
+`rejects-unknown-entity-slot` golden already existed and its stated rationale was "a school not
+in the data would return zero rows and read as a real answer of nothing"; I had closed the
+unknown-name case and left the known-name-wrong-kind case open one step to the side. Worse in
+the `COUNT` templates, where `roster_count` returned a confident **0** rather than a NULL, so
+nothing in the payload looked unusual. It was reachable through my own clarification loop,
+which offered players and cities as options for team-scoped questions.
+
+Fixed by making the kind explicit: `IntentPlan.EntityKind` declares what each intent's template
+can match, entity values are validated against it, and clarification options are filtered to it.
+Two goldens under `entity-kind-mismatch`.
+
+**A bare aggregate never looks empty, so `no_matching_rows` could never fire.** `CaveatEngine`
+tested `ResultSet.IsEmpty`, which is `Rows.Count == 0`. A `SUM` or `COUNT` with no `GROUP BY`
+always returns exactly one row, so on every scalar template that check was dead code — and the
+caveat's own text describes precisely the case it was failing to catch. This is hard rule 11 of
+`SEMANTIC_MODEL.md` ("`SUM` over no rows is `NULL`, not `0`") going unenforced by the pipeline
+that ships the rule.
+
+Fixed by treating a NULL in a single-row result as absence, and by splitting §6.5.1's two kinds
+of nothing apart: `games_played > 0` proves the player is tracked, so the NULL means the stat
+does not apply to their position (`stat_not_applicable`) rather than that no data exists
+(`no_matching_rows`). Both now carry a `NoDataPenalty`, so a result with no usable value reports
+**0.59**, not 0.99. Two goldens under `null-is-not-zero`.
+
+The through-line worth stating: both were found by *querying the running system* rather than
+re-reading the code, which is the same method that produced §1 and the same method that caught
+the tally error in §5.
+
 ---
 
 ## 4. A note on the harness itself
@@ -336,7 +375,7 @@ The time box ran out during Part 3. Everything below is a deliberate decision, n
 | **Admin dashboard UI** | No frontend exists in this submission and UI is explicitly out of scope. Two read-only ops endpoints ship instead. |
 | **Live LLM (Vertex/OpenAI)** | The submission must run offline with no keys. `ILlmClient` is the seam; a real client is one class. |
 | **Cloud deploy, containers** | Out of scope per the brief. Topology is documented in PRODUCTION_NOTES §5. |
-| **Answering all 17 questions** | "10 questions brilliantly beats 17 blandly." 13 are answered or correctly clarified; 4 are refused by design. |
+| **Answering all 17 questions** | "10 questions brilliantly beats 17 blandly." Running all 17 through the pipeline: **12 answered, 4 correctly clarified, 1 refused** (injuries). An earlier draft of this row said "13 answered or correctly clarified; 4 refused by design", which was simply wrong, and in the section that argues prose counts drift. Derived by executing all 17, not by counting in my head. |
 | **A real SQL parser** | The guard is a conservative prefilter and says so. A parser is the correct answer and is the top item below. |
 
 ### What I'd do next, in priority order
@@ -382,7 +421,7 @@ same lexicon powers site autocomplete and chatbot slot filling. PRODUCTION_NOTES
 
 ### Known limitations I am not treating as bugs
 
-- **Goldens are broad but shallow.** 24 across 16 failure classes, most classes carrying one
+- **Goldens are broad but shallow.** 28 across 18 failure classes, most classes carrying one
   or two. Only `clarification-loop-closes` (4) and `untrusted-slot-input` (3) go deeper, and
   both earned it by being where a real bug got through. Good regression coverage, not a
   substitute for fuzzing.

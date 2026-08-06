@@ -33,11 +33,13 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
 
         var mentioned = catalog.FindMentioned(question);
         var schools = mentioned
-            .Where(entity => entity.Kind == "school")
+            .Where(entity => entity.Kind == EntityKinds.School)
             .DistinctBy(entity => entity.Value)
             .ToList();
 
-        var entity = ResolveEntity(mentioned);
+        // Only entities of the kind this intent can actually match are candidates. Without this
+        // a player name resolves into a school-scoped template and returns NULL as an answer.
+        var entity = ResolveEntity(OfKind(mentioned, plan.EntityKind));
 
         // Entity before sport: a resolved player pins the sport, so we can answer that slot
         // ourselves instead of asking a question the data already settles.
@@ -49,7 +51,7 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
             // cross-sport, tie-blind answer the certified templates exist to prevent.
             if (supplied.TryGetValue(slot, out var answered) && !string.IsNullOrWhiteSpace(answered))
             {
-                if (!IsAcceptable(slot, answered))
+                if (!IsAcceptable(slot, answered, plan))
                 {
                     clarifications.Add(BuildClarification(slot, question, plan, schools));
                     continue;
@@ -86,14 +88,27 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
     /// Whether a caller-supplied slot value is one we recognise. Every slot in this dataset has
     /// a closed domain — sports and entities come from the data, metrics from a fixed set — so
     /// an unrecognised value is rejected rather than passed downstream.
+    ///
+    /// Entity values are checked against the kind the intent needs, not merely against the
+    /// lexicon. "Tony Jackson" is a real name and the wrong kind for a team-scoped question, and
+    /// accepting it produced a NULL reported as an answer.
     /// </summary>
-    private bool IsAcceptable(string slot, string value) => slot switch
+    private bool IsAcceptable(string slot, string value, IntentPlan plan) => slot switch
     {
         Slots.Sport => facts.Sports.Contains(value, StringComparer.OrdinalIgnoreCase),
         Slots.Metric => Metric.Find(value) is not null,
-        Slots.Entity or Slots.SchoolA or Slots.SchoolB => catalog.IsKnownEntity(value),
+        Slots.Entity => catalog.IsKnownEntity(value, plan.EntityKind),
+        Slots.SchoolA or Slots.SchoolB => catalog.IsKnownEntity(value, EntityKinds.School),
         _ => false,
     };
+
+    /// <summary>Entities of the kind an intent can match, or all of them when it does not care.</summary>
+    private static IReadOnlyList<EntityMatch> OfKind(
+        IReadOnlyList<EntityMatch> matches, string? kind) =>
+        kind is null
+            ? matches
+            : matches.Where(entity =>
+                entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)).ToList();
 
     /// <summary>
     /// Sport comes from the intent, then the question text, then the resolved entity. The last
@@ -169,14 +184,19 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
                 slot,
                 "Which two schools did you mean?",
                 $"I found {schools.Count} school name(s) in that question and need two.",
-                Candidates(catalog.FindPartial(question).Where(e => e.Kind == "school")),
+                Candidates(OfKind(catalog.FindPartial(question), EntityKinds.School)),
                 AllowOther: true),
 
+            // Candidates are limited to the kind this intent can answer. Offering a player for a
+            // team-scoped question invited the caller to pick an option that matches no rows.
             _ => new Clarification(
                 Slots.Entity,
                 "Which one did you mean?",
-                "That name matches more than one thing in this dataset.",
-                Candidates(catalog.FindPartial(question)),
+                plan.EntityKind is null
+                    ? "That name matches more than one thing in this dataset."
+                    : $"That name needs to identify a {plan.EntityKind} for this question, and it "
+                      + "matches more than one thing in this dataset.",
+                Candidates(OfKind(catalog.FindPartial(question), plan.EntityKind)),
                 AllowOther: true),
         };
 

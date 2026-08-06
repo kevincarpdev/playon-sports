@@ -16,7 +16,13 @@ public sealed record IntentPlan(
     IReadOnlyList<string> RequiredSlots,
     RefusalReason? Refusal = null,
     Metric? FixedMetric = null,
-    string? FixedSport = null)
+    string? FixedSport = null,
+    /// <summary>
+    /// The kind of entity this intent's certified template can actually match. A team template
+    /// filters on <c>teams.school</c>, so a player name fills the slot and matches nothing.
+    /// Declared here so the resolver rejects the wrong kind instead of the query returning NULL.
+    /// </summary>
+    string? EntityKind = null)
 {
     public bool IsRefused => Refusal is not null;
 }
@@ -47,35 +53,41 @@ public static class IntentCatalog
             Capability.RankedQuery, [], FixedSport: Football),
 
         ["roster_count"] = new("roster_count",
-            Capability.ScalarQuery, [Slots.Entity, Slots.Sport]),
+            Capability.ScalarQuery, [Slots.Entity, Slots.Sport],
+            EntityKind: EntityKinds.School),
 
         ["team_wins"] = new("team_wins",
-            Capability.AggregateQuery, [Slots.Entity, Slots.Sport]),
+            Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
+            EntityKind: EntityKinds.School),
 
         ["player_passing_yards"] = new("player_passing_yards",
             Capability.AggregateQuery, [Slots.Entity],
-            FixedMetric: Metric.Find("passing_yards"), FixedSport: Football),
+            FixedMetric: Metric.Find("passing_yards"), FixedSport: Football,
+            EntityKind: EntityKinds.Player),
 
         ["player_touchdowns"] = new("player_touchdowns",
             Capability.AggregateQuery, [Slots.Entity],
-            FixedMetric: Metric.Find("touchdowns"), FixedSport: Football),
+            FixedMetric: Metric.Find("touchdowns"), FixedSport: Football,
+            EntityKind: EntityKinds.Player),
 
         ["player_total_points"] = new("player_total_points",
             Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
-            FixedMetric: Metric.Find("points")),
+            FixedMetric: Metric.Find("points"), EntityKind: EntityKinds.Player),
 
         ["player_avg_ppg"] = new("player_avg_ppg",
             Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
-            FixedMetric: Metric.Find("points_per_game")),
+            FixedMetric: Metric.Find("points_per_game"), EntityKind: EntityKinds.Player),
 
         // Sport is required: Riverside lost to Oak Hill in football and won twice in
         // basketball, so a single yes/no is wrong half the time.
         ["head_to_head"] = new("head_to_head",
             Capability.JoinAcrossGames, [Slots.SchoolA, Slots.SchoolB, Slots.Sport]),
 
-        // "Jackson" is a school, a city and a player surname in this dataset.
+        // "Jackson" is a school, a city and a player surname in this dataset. The template is
+        // team-scoped, so only the school reading can be answered — the other two must clarify.
         ["entity_points"] = new("entity_points",
-            Capability.AggregateQuery, [Slots.Entity, Slots.Sport]),
+            Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
+            EntityKind: EntityKinds.School),
 
         // "Most points" is a choice, not a definition, and it mixes sports.
         ["best_player"] = new("best_player",

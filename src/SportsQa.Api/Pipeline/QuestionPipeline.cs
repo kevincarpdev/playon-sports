@@ -154,13 +154,13 @@ public sealed class QuestionPipeline(
 
         var result = execution.Data!;
         var evaluated = caveats.Evaluate(plan, slots.Values, result, query.RankedValueColumn);
-        var isTie = evaluated.Any(caveat => caveat.Code == "tied_result");
+        var isTie = evaluated.Any(caveat => caveat.Code == CaveatCodes.TiedResult);
 
         return new AskResponse
         {
             Outcome = AskOutcome.Answered,
             Question = request.Question,
-            Confidence = Score(source, isTie),
+            Confidence = Score(source, evaluated),
             Answer = new AnswerPayload(result.Columns, result.Rows, result.Scalar, isTie, query.Scope),
             Caveats = evaluated,
             Diagnostics = Diagnose(plan.Intent, routing, principal, interpretation, slots.Values)
@@ -221,14 +221,30 @@ public sealed class QuestionPipeline(
         };
     }
 
-    private double Score(SqlSource source, bool isTie)
+    /// <summary>
+    /// Confidence is priced from what we observed about the result, never from what the model
+    /// reported about itself. A tie means there is no single answer; no usable value means there
+    /// is no answer at all, which is the larger penalty of the two.
+    /// </summary>
+    private double Score(SqlSource source, IReadOnlyList<Caveat> caveats)
     {
         var trust = options.Trust;
-        var baseline = source == SqlSource.Certified
+        var score = source == SqlSource.Certified
             ? trust.CertifiedQueryConfidence
             : trust.ModelQueryConfidenceCap;
 
-        return Math.Round(isTie ? baseline - trust.TiePenalty : baseline, 2);
+        if (caveats.Any(caveat => caveat.Code == CaveatCodes.TiedResult))
+        {
+            score -= trust.TiePenalty;
+        }
+
+        if (caveats.Any(caveat => caveat.Code is CaveatCodes.NoMatchingRows
+                                             or CaveatCodes.StatNotApplicable))
+        {
+            score -= trust.NoDataPenalty;
+        }
+
+        return Math.Round(Math.Max(score, 0), 2);
     }
 
     private AskResponse Refuse(

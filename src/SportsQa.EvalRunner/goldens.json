@@ -334,6 +334,68 @@
       },
       "groundTruthSql": "SELECT p.first_name||' '||p.last_name, SUM(s.points)*1.0/COUNT(DISTINCT s.game_id) ppg FROM player_game_stats s JOIN games g ON g.game_id=s.game_id JOIN players p ON p.player_id=s.player_id WHERE g.sport='Basketball' GROUP BY s.player_id ORDER BY ppg DESC LIMIT 3;",
       "rationale": "Proves the subjective question becomes answerable once a metric is supplied, and that a valid slot still works after the validation added above. Bell leads on rate (25.78) as well as total despite playing 9 games to Quigley's 14."
+    },
+    {
+      "id": "rejects-player-as-school-entity",
+      "failureClass": "entity-kind-mismatch",
+      "question": "How many points did Jackson score this season?",
+      "slots": {
+        "entity": "Tony Jackson",
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "entity"
+        ]
+      },
+      "groundTruthSql": "SELECT COUNT(*) AS is_a_school FROM teams WHERE school = 'Tony Jackson';",
+      "rationale": "Tony Jackson is a real name in the lexicon and the wrong kind for a team-scoped template, which filters on teams.school. Validating only that a name exists let it through and the query returned NULL reported as Answered at 0.99. The entity slot is now checked against the kind the intent requires."
+    },
+    {
+      "id": "rejects-player-as-school-in-roster-count",
+      "failureClass": "entity-kind-mismatch",
+      "question": "How many players are on the Oak Hill football roster?",
+      "slots": {
+        "entity": "Tony Jackson",
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": [
+          "entity"
+        ]
+      },
+      "groundTruthSql": "SELECT COUNT(*) AS is_a_school FROM teams WHERE school = 'Tony Jackson';",
+      "rationale": "The COUNT variant of the same defect, and the worse one: a player name in a roster count returned a confident 0 rather than NULL, so there was nothing odd-looking in the payload at all."
+    },
+    {
+      "id": "untracked-player-is-not-zero",
+      "failureClass": "null-is-not-zero",
+      "question": "What is Derek Foss's total passing yards?",
+      "slots": {
+        "entity": "Isaiah Ramsey"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "hasCaveat": "no_matching_rows"
+      },
+      "groundTruthSql": "SELECT COUNT(*) AS stat_rows FROM player_game_stats s JOIN players p ON p.player_id = s.player_id WHERE p.first_name = 'Isaiah' AND p.last_name = 'Ramsey';",
+      "rationale": "Isaiah Ramsey is an offensive lineman with zero stat rows, so SUM returns NULL. A bare aggregate always returns one row, so ResultSet.IsEmpty was false and no_matching_rows could never fire on a scalar template. SEMANTIC_MODEL.md hard rule 11 says NULL is not zero; this asserts the pipeline now applies its own rule."
+    },
+    {
+      "id": "stat-not-applicable-to-position",
+      "failureClass": "null-is-not-zero",
+      "question": "What is Derek Foss's total passing yards?",
+      "slots": {
+        "entity": "Tony Jackson"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "hasCaveat": "stat_not_applicable"
+      },
+      "groundTruthSql": "SELECT SUM(s.pass_yds) AS pass_yds, COUNT(DISTINCT s.game_id) AS games FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE p.first_name || ' ' || p.last_name = 'Tony Jackson' AND g.sport = 'Football';",
+      "rationale": "The second of the two kinds of nothing (SEMANTIC_MODEL.md 6.5.1). Tony Jackson has 7 games of records but NULL passing yards because he is a running back, so this is 'not applicable to the position', not 'untracked'. games_played above zero is what distinguishes the two."
     }
   ]
 }

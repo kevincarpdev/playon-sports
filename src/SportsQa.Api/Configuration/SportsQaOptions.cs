@@ -48,6 +48,13 @@ public sealed class TrustOptions
 
     /// <summary>Penalty applied when the result set is a tie at the cut line.</summary>
     public double TiePenalty { get; init; } = 0.15;
+
+    /// <summary>
+    /// Penalty applied when the query returned no usable value. The SQL was valid and the
+    /// scope was right, so this is not an error — but it is not a number either, and reporting
+    /// it at full confidence is how a NULL gets read as an answer.
+    /// </summary>
+    public double NoDataPenalty { get; init; } = 0.4;
 }
 
 public sealed class RoutingOptions

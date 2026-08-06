@@ -75,11 +75,15 @@ public sealed class SchemaCatalog
     public bool HasTable(string table) => _columnsByTable.ContainsKey(table);
 
     /// <summary>
-    /// Whether a name matches an entity in the data. Used to validate caller-supplied slot
-    /// values, so a clarification answer cannot introduce a name the dataset has never seen.
+    /// Whether a name matches an entity in the data, optionally of a required kind. Used to
+    /// validate caller-supplied slot values, so a clarification answer cannot introduce a name
+    /// the dataset has never seen — or a real name of the wrong kind, which matches no rows and
+    /// reads as a real answer of nothing.
     /// </summary>
-    public bool IsKnownEntity(string value) =>
-        _lexicon.Any(entity => entity.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
+    public bool IsKnownEntity(string value, string? kind = null) =>
+        _lexicon.Any(entity =>
+            entity.Value.Equals(value, StringComparison.OrdinalIgnoreCase)
+            && (kind is null || entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase)));
 
     public bool HasColumn(string column) =>
         _columnsByTable.Values.Any(columns => columns.Contains(column));

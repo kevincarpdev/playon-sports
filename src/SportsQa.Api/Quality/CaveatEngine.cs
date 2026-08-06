@@ -10,6 +10,17 @@ namespace SportsQa.Api.Quality;
 ///
 /// Each caveat corresponds to a documented sharp edge in SEMANTIC_MODEL.md.
 /// </summary>
+/// <summary>Caveat codes, named so the pipeline can price them without matching strings.</summary>
+public static class CaveatCodes
+{
+    public const string NoMatchingRows = "no_matching_rows";
+    public const string StatNotApplicable = "stat_not_applicable";
+    public const string TiedResult = "tied_result";
+    public const string Truncated = "truncated";
+    public const string UnevenSchedules = "uneven_schedules";
+    public const string SportScoped = "sport_scoped";
+}
+
 public sealed class CaveatEngine
 {
     private static readonly string[] SportScopedIntents =
@@ -23,42 +34,73 @@ public sealed class CaveatEngine
     {
         var caveats = new List<Caveat>();
 
-        if (result.IsEmpty)
+        if (result.IsEmpty || HasNullValue(result))
         {
-            caveats.Add(new Caveat("no_matching_rows",
-                "No rows matched. In this dataset an absent stat line means the player is not " +
-                "tracked rather than that the value is zero — offensive line, tight end and all " +
-                "defensive positions have no stat rows at all."));
+            caveats.Add(NoDataCaveat(result));
         }
 
         if (IsTiedAtTop(result, rankedColumn))
         {
-            caveats.Add(new Caveat("tied_result",
+            caveats.Add(new Caveat(CaveatCodes.TiedResult,
                 $"{result.Rows.Count} rows share the top value. All are returned; there is no " +
                 "single answer to this question."));
         }
 
         if (result.Truncated)
         {
-            caveats.Add(new Caveat("truncated",
+            caveats.Add(new Caveat(CaveatCodes.Truncated,
                 "Results were truncated at the configured row ceiling."));
         }
 
         if (ComparesAcrossTeams(result))
         {
-            caveats.Add(new Caveat("uneven_schedules",
+            caveats.Add(new Caveat(CaveatCodes.UnevenSchedules,
                 "Teams played between 8 and 14 games depending on sport and school, so season " +
                 "totals are not directly comparable across teams."));
         }
 
         if (SportScopedIntents.Contains(plan.Intent) && slots.TryGetValue(Slots.Sport, out var sport))
         {
-            caveats.Add(new Caveat("sport_scoped",
+            caveats.Add(new Caveat(CaveatCodes.SportScoped,
                 $"Scoped to {sport} only. Points are not comparable across sports, so a " +
                 "combined figure would be meaningless."));
         }
 
         return caveats;
+    }
+
+    /// <summary>
+    /// A bare aggregate with no GROUP BY always returns exactly one row, so an empty match
+    /// surfaces as NULL rather than as zero rows — SEMANTIC_MODEL.md hard rule 11. Testing
+    /// <see cref="ResultSet.IsEmpty"/> alone therefore never fires on a scalar template, which is
+    /// how a NULL reached a caller reported as an answer.
+    /// </summary>
+    private static bool HasNullValue(ResultSet result) =>
+        result.Rows.Count == 1 && result.Rows[0].Any(cell => cell is null);
+
+    /// <summary>
+    /// The two different kinds of nothing (SEMANTIC_MODEL.md §6.5.1). A games-played count above
+    /// zero proves the subject is tracked, so the NULL means this statistic does not apply to
+    /// their position rather than that no data exists for them at all.
+    /// </summary>
+    private static Caveat NoDataCaveat(ResultSet result)
+    {
+        var index = IndexOf(result, "games_played");
+        var tracked = index >= 0
+                      && result.Rows.Count == 1
+                      && result.Rows[0][index] is long played
+                      && played > 0;
+
+        return tracked
+            ? new Caveat(CaveatCodes.StatNotApplicable,
+                "There is no value for this statistic even though the player has game records, "
+                + "so the statistic does not apply to their position. Football stat lines carry "
+                + "passing yards for quarterbacks, rushing for running backs and receiving for "
+                + "receivers only.")
+            : new Caveat(CaveatCodes.NoMatchingRows,
+                "No rows matched, so this is not a zero. In this dataset an absent stat line "
+                + "means the subject is not tracked — offensive line, tight end and all "
+                + "defensive positions have no stat rows at all.");
     }
 
     /// <summary>

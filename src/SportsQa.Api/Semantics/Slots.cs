@@ -14,6 +14,19 @@ public static class Slots
 }
 
 /// <summary>
+/// The kinds of thing the lexicon holds. An intent declares which kind its entity slot needs,
+/// because "is this a name in the data" is a weaker check than "is this the kind of name this
+/// query can match" — a player name satisfies the former and returns nothing from a
+/// school-scoped template.
+/// </summary>
+public static class EntityKinds
+{
+    public const string School = "school";
+    public const string Player = "player";
+    public const string City = "city";
+}
+
+/// <summary>
 /// Which end of a metric's range is the good end.
 ///
 /// Every metric in this dataset is higher-is-better, so this looks redundant here. It is not:
