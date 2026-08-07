@@ -224,6 +224,51 @@ public sealed class InjectionTests
     }
 
     // -------------------------------------------------------------------------
+    // StubIntent — eval harness override (must not escalate ops / must stay opt-in)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task StubIntent_ops_rollup_is_unsupported_for_non_admin()
+    {
+        // Even if StubIntent reaches AskAsync (e.g. a future endpoint forgets to clear it),
+        // ops intents stay invisible to unprivileged callers.
+        var response = await Pipeline().AskAsync(
+            new AskRequest("How many teams are in the database?", null, "ops:rollup_freshness"),
+            new Principal(Role.Anonymous),
+            CancellationToken.None);
+
+        Assert.Equal(AskOutcome.CannotAnswer, response.Outcome);
+        Assert.Equal("unsupported_question", response.Refusal?.Code);
+        Assert.Null(response.Answer);
+    }
+
+    [Fact]
+    public async Task StubIntent_most_points_allowed_answers_when_sport_is_slotted()
+    {
+        var response = await Pipeline().AskAsync(
+            new AskRequest(
+                "Which team gave up the most points?",
+                new Dictionary<string, string> { ["sport"] = "Football" },
+                "most_points_allowed"),
+            new Principal(Role.Subscriber),
+            CancellationToken.None);
+
+        Assert.Equal(AskOutcome.Answered, response.Outcome);
+        Assert.Equal(SqlSource.Certified, response.Diagnostics?.SqlSource);
+        Assert.Equal("Jackson Prep", response.Answer!.Rows[0][0]?.ToString());
+    }
+
+    [Fact]
+    public async Task Without_StubIntent_an_unknown_phrasing_is_refused()
+    {
+        // Fake LLM does not know this string; reach requires StubIntent (or a real model).
+        var response = await Ask("Which team gave up the most points?");
+
+        Assert.Equal(AskOutcome.CannotAnswer, response.Outcome);
+        Assert.Equal("unsupported_question", response.Refusal?.Code);
+    }
+
+    // -------------------------------------------------------------------------
     // Positive control + integrity
     // -------------------------------------------------------------------------
 

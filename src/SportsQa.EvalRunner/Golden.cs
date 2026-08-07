@@ -11,6 +11,14 @@ public sealed record Golden
     public string FailureClass { get; init; } = "unclassified";
     public string? Role { get; init; }
     public Dictionary<string, string>? Slots { get; init; }
+
+    /// <summary>
+    /// Eval-only intent override. Fake LLM only knows 17 questions; new intents reach the
+    /// certified path through this field instead of editing the recorded model.
+    /// </summary>
+    // TODO(contract): AskRequest optional StubIntent; Golden.StubIntent; EvalRunner wires it
+    public string? StubIntent { get; init; }
+
     public required Expectation Expect { get; init; }
 
     /// <summary>The query used to derive the expected value, for reviewer re-verification.</summary>

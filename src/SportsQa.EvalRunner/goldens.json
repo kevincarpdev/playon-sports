@@ -396,6 +396,44 @@
       },
       "groundTruthSql": "SELECT SUM(s.pass_yds) AS pass_yds, COUNT(DISTINCT s.game_id) AS games FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE p.first_name || ' ' || p.last_name = 'Tony Jackson' AND g.sport = 'Football';",
       "rationale": "The second of the two kinds of nothing (SEMANTIC_MODEL.md 6.5.1). Tony Jackson has 7 games of records but NULL passing yards because he is a running back, so this is 'not applicable to the position', not 'untracked'. games_played above zero is what distinguishes the two."
+    },
+    {
+      "id": "most-points-allowed-football",
+      "failureClass": "new-intent",
+      "question": "Which team gave up the most points?",
+      "stubIntent": "most_points_allowed",
+      "slots": {
+        "sport": "Football"
+      },
+      "expect": {
+        "outcome": "Answered",
+        "column": "school",
+        "value": "Jackson Prep",
+        "isTie": false
+      },
+      "groundTruthSql": "SELECT school, points_allowed FROM (SELECT t.school, SUM(CASE WHEN g.home_team_id = t.team_id THEN g.away_score ELSE g.home_score END) AS points_allowed, DENSE_RANK() OVER (ORDER BY SUM(CASE WHEN g.home_team_id = t.team_id THEN g.away_score ELSE g.home_score END) DESC) AS rnk FROM games g JOIN teams t ON t.team_id IN (g.home_team_id, g.away_team_id) WHERE t.sport = 'Football' AND g.sport = 'Football' AND g.season = '2025' GROUP BY t.team_id) WHERE rnk = 1;",
+      "rationale": "New certified intent. Fake LLM does not know this phrasing, so stubIntent reaches the template. Points allowed is opponent score in both home and away orientations; DENSE_RANK returns the full tied set. Football 2025 ground truth: Jackson Prep 173."
+    },
+    {
+      "id": "most-points-allowed-needs-sport",
+      "failureClass": "new-intent",
+      "question": "Which team gave up the most points?",
+      "stubIntent": "most_points_allowed",
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": ["sport"]
+      },
+      "rationale": "Sport is required: football and basketball leaders diverge, so a bare question must clarify rather than guess."
+    },
+    {
+      "id": "most-points-allowed-unknown-without-stub",
+      "failureClass": "new-intent",
+      "question": "Which team gave up the most points?",
+      "expect": {
+        "outcome": "CannotAnswer",
+        "refusalCode": "unsupported_question"
+      },
+      "rationale": "Without stubIntent the Fake LLM returns unknown. Proves we did not quietly teach the recorded model a new string."
     }
   ]
 }

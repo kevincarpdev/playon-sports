@@ -43,8 +43,10 @@ foreach (var golden in file.Goldens)
         ? parsed
         : Role.Subscriber;
 
+    // TODO(contract): AskRequest optional StubIntent; Golden.StubIntent; EvalRunner wires it
     var response = await pipeline.AskAsync(
-        new AskRequest(golden.Question, golden.Slots), new Principal(role), CancellationToken.None);
+        new AskRequest(golden.Question, golden.Slots, golden.StubIntent),
+        new Principal(role), CancellationToken.None);
 
     var verdict = Verifier.Verify(golden, response);
     verdicts.Add(verdict);

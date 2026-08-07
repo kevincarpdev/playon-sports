@@ -46,7 +46,8 @@ public sealed class QuestionPipeline(
         var interpretation = await llm.InterpretAsync(
             request.Question, semanticContext.Content, cancellationToken);
 
-        var plan = IntentCatalog.For(interpretation.Intent);
+        // TODO(contract): BuildCertified arm + AskAsync uses request.StubIntent ?? interpretation.Intent
+        var plan = IntentCatalog.For(request.StubIntent ?? interpretation.Intent);
 
         // Ops intents are invisible to client roles: refuse as unsupported rather than
         // forbidden, so the internal tool surface cannot be enumerated by probing.
@@ -206,6 +207,9 @@ public sealed class QuestionPipeline(
 
             "entity_points" when entity is not null && sport is not null =>
                 certified.TeamPointsFor(entity, sport),
+
+            "most_points_allowed" when sport is not null =>
+                certified.MostPointsAllowed(sport),
 
             "player_passing_yards" or "player_touchdowns" or "player_total_points" or "player_avg_ppg"
                 when entity is not null && sport is not null && metric is not null =>

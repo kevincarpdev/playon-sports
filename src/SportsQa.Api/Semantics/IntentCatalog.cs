@@ -60,6 +60,10 @@ public static class IntentCatalog
             Capability.AggregateQuery, [Slots.Entity, Slots.Sport],
             EntityKind: EntityKinds.School),
 
+        // TODO(contract): IntentPlan most_points_allowed — RankedQuery, RequiredSlots: sport
+        ["most_points_allowed"] = new("most_points_allowed",
+            Capability.RankedQuery, [Slots.Sport]),
+
         ["player_passing_yards"] = new("player_passing_yards",
             Capability.AggregateQuery, [Slots.Entity],
             FixedMetric: Metric.Find("passing_yards"), FixedSport: Football,

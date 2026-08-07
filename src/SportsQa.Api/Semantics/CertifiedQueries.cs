@@ -227,6 +227,43 @@ public sealed class CertifiedQueries(DatasetFacts facts)
     }
 
     /// <summary>
+    /// Team that allowed the most points — opponent score in both home and away orientations.
+    /// Returns the full tied set via <c>DENSE_RANK</c>, never an arbitrary <c>LIMIT 1</c> row.
+    /// </summary>
+    // TODO(contract): MostPointsAllowed(sport) — season from facts, opponent score CASE, DENSE_RANK, RankedValueColumn points_allowed
+    public CertifiedQuery MostPointsAllowed(string sport)
+    {
+        var season = facts.SeasonFor(sport);
+
+        return new CertifiedQuery(
+            """
+            SELECT school, points_allowed FROM (
+              SELECT t.school,
+                     SUM(CASE WHEN g.home_team_id = t.team_id THEN g.away_score ELSE g.home_score END)
+                       AS points_allowed,
+                     DENSE_RANK() OVER (
+                       ORDER BY SUM(CASE WHEN g.home_team_id = t.team_id
+                                         THEN g.away_score ELSE g.home_score END) DESC
+                     ) AS rnk,
+                     t.team_id
+              FROM games g
+              JOIN teams t ON t.team_id IN (g.home_team_id, g.away_team_id)
+              WHERE t.sport = $sport AND g.sport = $sport AND g.season = $season
+              GROUP BY t.team_id
+            )
+            WHERE rnk = 1
+            ORDER BY team_id
+            """,
+            new Dictionary<string, object?>
+            {
+                ["$sport"] = sport,
+                ["$season"] = season,
+            },
+            $"Points allowed by team, {sport} {season}. Both home and away games.",
+            RankedValueColumn: "points_allowed");
+    }
+
+    /// <summary>
     /// Head-to-head across both orientations — a one-sided join misses half the fixtures.
     ///
     /// `winner` is NULL on a draw rather than defaulting to the away side. Four basketball games

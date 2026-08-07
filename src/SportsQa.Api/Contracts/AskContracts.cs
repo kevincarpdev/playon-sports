@@ -6,7 +6,15 @@ namespace SportsQa.Api.Contracts;
 /// A question, plus any clarifications the caller has already answered. Sending slots back
 /// is what closes the clarification loop — without them a follow-up would ask forever.
 /// </summary>
-public sealed record AskRequest(string Question, Dictionary<string, string>? Slots = null);
+/// <param name="StubIntent">
+/// Eval-harness override so goldens can exercise intents the Fake LLM does not know.
+/// The public <c>/ask</c> endpoint clears this; production traffic must not set it.
+/// </param>
+// TODO(contract): AskRequest optional StubIntent; Golden.StubIntent; EvalRunner wires it
+public sealed record AskRequest(
+    string Question,
+    Dictionary<string, string>? Slots = null,
+    string? StubIntent = null);
 
 public enum AskOutcome
 {

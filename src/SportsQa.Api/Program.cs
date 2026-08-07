@@ -96,6 +96,9 @@ app.MapPost("/ask", async (
         });
     }
 
+    // StubIntent is an eval-harness override. Public /ask must not honour a client-supplied one.
+    request = request with { StubIntent = null };
+
     try
     {
         var response = await pipeline.AskAsync(request, principal, cancellationToken);
