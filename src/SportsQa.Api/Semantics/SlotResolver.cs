@@ -39,7 +39,22 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
 
         // Only entities of the kind this intent can actually match are candidates. Without this
         // a player name resolves into a school-scoped template and returns NULL as an answer.
-        var entity = ResolveEntity(OfKind(mentioned, plan.EntityKind));
+        // Exact first; fuzzy covers typos only when exact resolution produced nothing.
+        var entity = ResolveEntity(OfKind(mentioned, plan.EntityKind))
+                     ?? ResolveFuzzy(question, plan.EntityKind);
+
+        if (schools.Count == 0
+            && (plan.RequiredSlots.Contains(Slots.SchoolA)
+                || plan.RequiredSlots.Contains(Slots.SchoolB)
+                || (plan.EntityKind == EntityKinds.School && entity is null)))
+        {
+            var fuzzySchool = ResolveFuzzy(question, EntityKinds.School);
+            if (fuzzySchool is not null)
+            {
+                schools = [fuzzySchool];
+                entity ??= fuzzySchool;
+            }
+        }
 
         // Entity before sport: a resolved player pins the sport, so we can answer that slot
         // ourselves instead of asking a question the data already settles.
@@ -158,6 +173,35 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
         };
     }
 
+    /// <summary>
+    /// Auto-resolve a typo when the best unshadowed fuzzy hit clears the score and gap
+    /// thresholds. Near-ties and weak matches stay unresolved so clarification can ask.
+    /// </summary>
+    private EntityMatch? ResolveFuzzy(string question, string? kind)
+    {
+        var ranked = catalog.FindFuzzy(question, kind)
+            .Where(hit => !hit.Match.IsShadowed)
+            .DistinctBy(hit => Key(hit.Match))
+            .ToList();
+
+        if (ranked.Count == 0)
+        {
+            return null;
+        }
+
+        var best = ranked[0];
+        if (best.Score < options.Execution.FuzzyAutoResolveMinScore)
+        {
+            return null;
+        }
+
+        var gap = ranked.Count < 2
+            ? double.PositiveInfinity
+            : best.Score - ranked[1].Score;
+
+        return gap >= options.Execution.FuzzyAutoResolveMinGap ? best.Match : null;
+    }
+
     private Clarification BuildClarification(
         string slot, string question, IntentPlan plan, IReadOnlyList<EntityMatch> schools) =>
         slot switch
@@ -184,7 +228,7 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
                 slot,
                 "Which two schools did you mean?",
                 $"I found {schools.Count} school name(s) in that question and need two.",
-                Candidates(OfKind(catalog.FindPartial(question), EntityKinds.School)),
+                RankedCandidates(question, EntityKinds.School),
                 AllowOther: true),
 
             // Candidates are limited to the kind this intent can answer. Offering a player for a
@@ -196,7 +240,7 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
                     ? "That name matches more than one thing in this dataset."
                     : $"That name needs to identify a {plan.EntityKind} for this question, and it "
                       + "matches more than one thing in this dataset.",
-                Candidates(OfKind(catalog.FindPartial(question), plan.EntityKind)),
+                RankedCandidates(question, plan.EntityKind),
                 AllowOther: true),
         };
 
@@ -208,12 +252,12 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
             .Select(metric => new ClarificationOption(metric.Key, metric.Label, metric.OnlyForSport))
             .ToList();
 
-    private List<ClarificationOption> Candidates(IEnumerable<EntityMatch> matches) =>
-        matches
-            .DistinctBy(Key)
+    private List<ClarificationOption> RankedCandidates(string question, string? kind) =>
+        catalog.FindFuzzy(question, kind)
+            .DistinctBy(hit => Key(hit.Match))
             .Take(options.Execution.MaxClarificationOptions)
-            .Select(entity => new ClarificationOption(
-                entity.Value, $"{entity.Value} ({entity.Kind})", entity.Detail))
+            .Select(hit => new ClarificationOption(
+                hit.Match.Value, $"{hit.Match.Value} ({hit.Match.Kind})", hit.Match.Detail))
             .ToList();
 
     private static string? Pick(IReadOnlyList<EntityMatch> schools, int index) =>

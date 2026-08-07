@@ -393,6 +393,42 @@
       },
       "groundTruthSql": "SELECT SUM(s.pass_yds) AS pass_yds, COUNT(DISTINCT s.game_id) AS games FROM player_game_stats s JOIN games g ON g.game_id = s.game_id JOIN players p ON p.player_id = s.player_id WHERE p.first_name || ' ' || p.last_name = 'Tony Jackson' AND g.sport = 'Football';",
       "rationale": "The second of the two kinds of nothing (SEMANTIC_MODEL.md 6.5.1). Tony Jackson has 7 games of records but NULL passing yards because he is a running back, so this is 'not applicable to the position', not 'untracked'. games_played above zero is what distinguishes the two."
+    },
+    {
+      "id": "typo-jackson-prep-wins",
+      "failureClass": "fuzzy-entity",
+      "question": "How many games did Jakson Prep win in the 2025 football season?",
+      "expect": {
+        "outcome": "Answered",
+        "column": "wins",
+        "value": 3
+      },
+      "groundTruthSql": "SELECT SUM(CASE WHEN (home_team_id=1 AND home_score>away_score) OR (away_team_id=1 AND away_score>home_score) THEN 1 ELSE 0 END) FROM games WHERE 1 IN (home_team_id, away_team_id);",
+      "rationale": "One-character typo in the school name. Fuzzy score must clear 0.9 with enough gap to auto-resolve to Jackson Prep without asking."
+    },
+    {
+      "id": "typo-oakhill-roster",
+      "failureClass": "fuzzy-entity",
+      "question": "How many players are on the OakHill football roster?",
+      "expect": {
+        "outcome": "Answered",
+        "column": "player_count",
+        "value": 12
+      },
+      "groundTruthSql": "SELECT COUNT(*) FROM players p JOIN teams t ON t.team_id = p.team_id WHERE t.school = 'Oak Hill' AND t.sport = 'Football';",
+      "rationale": "Space omitted in the school name. Space-insensitive exact match should auto-resolve to Oak Hill."
+    },
+    {
+      "id": "typo-marcus-bel-points",
+      "failureClass": "fuzzy-entity",
+      "question": "How many total points has marcus bel scored this season?",
+      "expect": {
+        "outcome": "Answered",
+        "column": "points",
+        "value": 232
+      },
+      "groundTruthSql": "SELECT SUM(s.points) FROM player_game_stats s JOIN games g ON g.game_id = s.game_id WHERE s.player_id = 113;",
+      "rationale": "Truncated last name. Edit distance on the name window must still clear the auto-resolve threshold for Marcus Bell."
     }
   ]
 }

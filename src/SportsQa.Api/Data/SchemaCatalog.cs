@@ -20,6 +20,9 @@ public sealed record EntityMatch(
     public bool IsShadowed { get; init; }
 }
 
+/// <summary>A lexicon hit with its fuzzy score against the question text.</summary>
+public sealed record ScoredEntity(EntityMatch Match, double Score);
+
 /// <summary>
 /// The live schema plus a lexicon of the entity names a question might mention. Both are
 /// read from the database at startup rather than hardcoded, so a new sport or season needs
@@ -121,6 +124,162 @@ public sealed class SchemaCatalog
                 .Split(' ')
                 .Any(part => part.Length > 2 && tokens.Contains(part)))
             .ToList();
+    }
+
+    /// <summary>
+    /// Ranked lexicon hits by fuzzy score. Exact phrase matches keep subsumption (longer name
+    /// wins); non-exact typos still score. Optional kind filter narrows to what an intent can use.
+    /// </summary>
+    public IReadOnlyList<ScoredEntity> FindFuzzy(string question, string? kind = null)
+    {
+        var candidates = kind is null
+            ? _lexicon
+            : _lexicon.Where(entity =>
+                entity.Kind.Equals(kind, StringComparison.OrdinalIgnoreCase));
+
+        var scored = candidates
+            .Select(entity => new ScoredEntity(entity, ScoreMention(question, entity.Value)))
+            .Where(hit => hit.Score > 0)
+            .OrderByDescending(hit => hit.Score)
+            .ThenByDescending(hit => hit.Match.Value.Length)
+            .ToList();
+
+        // When an exact longer name is present, drop shorter exact hits the same way
+        // FindMentioned does — fuzzy must not reintroduce subsumed "Jackson" next to "Tony Jackson".
+        var exact = scored.Where(hit => hit.Score >= 1.0).Select(hit => hit.Match).ToList();
+        return scored
+            .Where(hit => hit.Score < 1.0
+                          || !exact.Any(other => Subsumes(other, hit.Match)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// How well <paramref name="entityName"/> appears in <paramref name="question"/>.
+    /// Exact phrase = 1.0; all tokens present = 0.95; space-insensitive exact = 0.93;
+    /// otherwise max(token overlap, edit similarity), always below 1.0.
+    /// </summary>
+    public static double ScoreMention(string question, string entityName)
+    {
+        var haystack = $" {Normalize(question)} ";
+        var entity = Normalize(entityName);
+        if (entity.Length == 0)
+        {
+            return 0;
+        }
+
+        if (haystack.Contains($" {entity} "))
+        {
+            return 1.0;
+        }
+
+        var questionTokens = Normalize(question).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var entityTokens = entity.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (entityTokens.Length == 0 || questionTokens.Length == 0)
+        {
+            return 0;
+        }
+
+        if (entityTokens.All(token => questionTokens.Contains(token)))
+        {
+            return 0.95;
+        }
+
+        var significant = entityTokens.Where(token => token.Length > 2).ToArray();
+        var overlapDenom = significant.Length > 0 ? significant : entityTokens;
+        var tokenOverlap = overlapDenom.Count(token => questionTokens.Contains(token))
+                           / (double)overlapDenom.Length;
+
+        var questionCompact = string.Concat(questionTokens);
+        var entityCompact = string.Concat(entityTokens);
+        if (questionCompact.Contains(entityCompact, StringComparison.Ordinal))
+        {
+            return 0.93;
+        }
+
+        var editSimilarity = BestEditSimilarity(questionTokens, entityTokens, entityCompact);
+        var score = Math.Max(tokenOverlap, editSimilarity);
+        return Math.Min(score, 0.99);
+    }
+
+    private static double BestEditSimilarity(
+        string[] questionTokens, string[] entityTokens, string entityCompact)
+    {
+        var entityJoined = string.Join(' ', entityTokens);
+        var best = EditSimilarity(string.Concat(questionTokens), entityCompact);
+        best = Math.Max(best, EditSimilarity(string.Join(' ', questionTokens), entityJoined));
+
+        var window = Math.Max(1, entityTokens.Length);
+        for (var start = 0; start <= questionTokens.Length - window; start++)
+        {
+            var slice = questionTokens.AsSpan(start, window);
+            var joined = string.Join(' ', slice.ToArray());
+            var compact = string.Concat(slice.ToArray());
+            best = Math.Max(best, EditSimilarity(joined, entityJoined));
+            best = Math.Max(best, EditSimilarity(compact, entityCompact));
+        }
+
+        // Also try windows one token wider/narrower for glued vs spaced names.
+        foreach (var size in new[] { window - 1, window + 1 })
+        {
+            if (size < 1 || size > questionTokens.Length)
+            {
+                continue;
+            }
+
+            for (var start = 0; start <= questionTokens.Length - size; start++)
+            {
+                var slice = questionTokens.AsSpan(start, size);
+                var joined = string.Join(' ', slice.ToArray());
+                var compact = string.Concat(slice.ToArray());
+                best = Math.Max(best, EditSimilarity(joined, entityJoined));
+                best = Math.Max(best, EditSimilarity(compact, entityCompact));
+            }
+        }
+
+        return best;
+    }
+
+    private static double EditSimilarity(string left, string right)
+    {
+        if (left.Length == 0 && right.Length == 0)
+        {
+            return 1.0;
+        }
+
+        var maxLen = Math.Max(left.Length, right.Length);
+        if (maxLen == 0)
+        {
+            return 0;
+        }
+
+        return 1.0 - Levenshtein(left, right) / (double)maxLen;
+    }
+
+    private static int Levenshtein(string left, string right)
+    {
+        var previous = new int[right.Length + 1];
+        var current = new int[right.Length + 1];
+
+        for (var j = 0; j <= right.Length; j++)
+        {
+            previous[j] = j;
+        }
+
+        for (var i = 1; i <= left.Length; i++)
+        {
+            current[0] = i;
+            for (var j = 1; j <= right.Length; j++)
+            {
+                var cost = left[i - 1] == right[j - 1] ? 0 : 1;
+                current[j] = Math.Min(
+                    Math.Min(current[j - 1] + 1, previous[j] + 1),
+                    previous[j - 1] + cost);
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[right.Length];
     }
 
     private static string Normalize(string value)
