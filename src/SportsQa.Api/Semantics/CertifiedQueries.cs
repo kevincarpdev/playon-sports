@@ -10,7 +10,13 @@ public sealed record CertifiedQuery(
     /// The column a superlative ranks on, when there is one. Named explicitly so tie
     /// detection does not have to guess which column carries the answer.
     /// </summary>
-    string? RankedValueColumn = null);
+    string? RankedValueColumn = null,
+    /// <summary>
+    /// The underlying fact-table column when the ranked alias is not the source name
+    /// (e.g. result alias <c>value</c> from <c>s.rebounds</c>). Used to apply clipped-stat
+    /// refusal policy without parsing SQL.
+    /// </summary>
+    string? RankedSourceColumn = null);
 
 /// <summary>
 /// Reviewed SQL owned by the semantic layer, one template per known intent.
@@ -98,9 +104,9 @@ public sealed class CertifiedQueries(DatasetFacts facts)
     }
 
     /// <summary>
-    /// Single-game maximum, returning every row at the top rank. Ties are not an edge case
-    /// here: 52 stat lines across 34 players share the rebound high, because the column is
-    /// clipped at 12 (SEMANTIC_MODEL.md §6.8).
+    /// Single-game maximum, returning every row at the top rank. For clipped columns
+    /// (rebounds, assists — SEMANTIC_MODEL.md §6.8) a tie at the ceiling is refused by the
+    /// pipeline rather than presented as a winner set.
     /// </summary>
     public CertifiedQuery SingleGameMax(string sport, string column, string label)
     {
@@ -119,7 +125,8 @@ public sealed class CertifiedQueries(DatasetFacts facts)
              """,
             new Dictionary<string, object?> { ["$sport"] = sport, ["$season"] = season },
             $"Highest single-game {label}, {sport} {season}.",
-            RankedValueColumn: "value");
+            RankedValueColumn: "value",
+            RankedSourceColumn: column);
     }
 
     public CertifiedQuery HighestScoringGame(string sport)

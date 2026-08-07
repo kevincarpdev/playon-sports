@@ -146,6 +146,19 @@ public sealed class QuestionPipeline(
         var evaluated = caveats.Evaluate(plan, slots.Values, result, query.RankedValueColumn);
         var isTie = evaluated.Any(caveat => caveat.Code == CaveatCodes.TiedResult);
 
+        // Clipped columns share a ceiling by design (SEMANTIC_MODEL.md §6.8). A tie there is
+        // not a real multi-winner answer — refuse rather than dump the full set.
+        if (isTie && ClippedStats.Contains(query.RankedSourceColumn))
+        {
+            return Refuse(request, plan.Intent,
+                new RefusalReason(
+                    "clipped_stat_ceiling",
+                    "This statistic is capped upstream, so many players share the ceiling and "
+                    + "there is no single-game maximum.",
+                    "Unclipped per-game values would be needed to name a winner."),
+                plan.Intent, principal, interpretation.Confidence);
+        }
+
         return new AskResponse
         {
             Outcome = AskOutcome.Answered,

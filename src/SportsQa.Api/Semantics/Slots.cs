@@ -14,6 +14,22 @@ public static class Slots
 }
 
 /// <summary>
+/// Per-game columns capped upstream (SEMANTIC_MODEL.md §6.8). Superlatives that tie on these
+/// are not answerable as single winners — the ceiling is shared by design.
+/// </summary>
+public static class ClippedStats
+{
+    public static readonly HashSet<string> Columns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "rebounds",
+        "assists",
+    };
+
+    public static bool Contains(string? column) =>
+        column is not null && Columns.Contains(column);
+}
+
+/// <summary>
 /// The kinds of thing the lexicon holds. An intent declares which kind its entity slot needs,
 /// because "is this a name in the data" is a weaker check than "is this the kind of name this
 /// query can match" — a player name satisfies the former and returns nothing from a

@@ -110,14 +110,11 @@
       "failureClass": "unreported-tie",
       "question": "Who had the most rebounds in a single game?",
       "expect": {
-        "outcome": "Answered",
-        "column": "value",
-        "value": 12,
-        "isTie": true,
-        "hasCaveat": "tied_result"
+        "outcome": "CannotAnswer",
+        "refusalCode": "clipped_stat_ceiling"
       },
       "groundTruthSql": "SELECT MAX(rebounds) AS value FROM player_game_stats; -- tie size: SELECT COUNT(*) FROM player_game_stats WHERE rebounds = 12; => 52",
-      "rationale": "12 is the maximum and 52 stat lines across 34 players share it, because the column is clipped at 12. The model's ORDER BY ... LIMIT 1 returns one arbitrary name as fact."
+      "rationale": "rebounds is clipped at 12 (SEMANTIC_MODEL.md §6.8); 52 stat lines share the ceiling, so a single-game maximum is not answerable. Policy: refuse clipped-column ties rather than return the full set."
     },
     {
       "id": "highest-scoring-football-game-tie",
