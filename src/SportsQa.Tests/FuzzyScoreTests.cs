@@ -4,8 +4,9 @@ using Xunit;
 namespace SportsQa.Tests;
 
 /// <summary>
-/// Score-only tests for fuzzy entity resolution. Thresholds (0.9 score, 0.1 gap) are what
-/// SlotResolver uses to auto-resolve; these assert the scorer feeds that contract correctly.
+/// Score-only tests for fuzzy entity resolution. SlotResolver auto-resolves when score
+/// clears Trust.MinSlotConfidence (default 0.75) with gap ≥ Execution.FuzzyAutoResolveMinGap
+/// (0.1). These assert the scorer still ranks strong typos well above that floor.
 /// </summary>
 public sealed class FuzzyScoreTests
 {

@@ -404,7 +404,7 @@
         "value": 3
       },
       "groundTruthSql": "SELECT SUM(CASE WHEN (home_team_id=1 AND home_score>away_score) OR (away_team_id=1 AND away_score>home_score) THEN 1 ELSE 0 END) FROM games WHERE 1 IN (home_team_id, away_team_id);",
-      "rationale": "One-character typo in the school name. Fuzzy score must clear 0.9 with enough gap to auto-resolve to Jackson Prep without asking."
+      "rationale": "One-character typo in the school name. Fuzzy score (~0.92) clears MinSlotConfidence (0.75) with enough gap to auto-resolve to Jackson Prep."
     },
     {
       "id": "typo-oakhill-roster",
@@ -416,7 +416,7 @@
         "value": 12
       },
       "groundTruthSql": "SELECT COUNT(*) FROM players p JOIN teams t ON t.team_id = p.team_id WHERE t.school = 'Oak Hill' AND t.sport = 'Football';",
-      "rationale": "Space omitted in the school name. Space-insensitive exact match should auto-resolve to Oak Hill."
+      "rationale": "Space omitted in the school name. Compact match (~0.93) clears MinSlotConfidence and auto-resolves to Oak Hill."
     },
     {
       "id": "typo-marcus-bel-points",
@@ -428,7 +428,17 @@
         "value": 232
       },
       "groundTruthSql": "SELECT SUM(s.points) FROM player_game_stats s JOIN games g ON g.game_id = s.game_id WHERE s.player_id = 113;",
-      "rationale": "Truncated last name. Edit distance on the name window must still clear the auto-resolve threshold for Marcus Bell."
+      "rationale": "Truncated last name. Edit similarity (~0.91) clears MinSlotConfidence for Marcus Bell."
+    },
+    {
+      "id": "weak-typo-jakson-wins-clarifies",
+      "failureClass": "slot-confidence",
+      "question": "How many games did Jakson win in the 2025 football season?",
+      "expect": {
+        "outcome": "NeedsClarification",
+        "clarificationSlots": ["entity"]
+      },
+      "rationale": "Bare 'Jakson' scores ~0.58 against Jackson Prep — below MinSlotConfidence (0.75) — so the entity slot clarifies with ranked options instead of guessing."
     }
   ]
 }

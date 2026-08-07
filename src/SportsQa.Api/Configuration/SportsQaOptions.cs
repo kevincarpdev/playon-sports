@@ -32,14 +32,8 @@ public sealed class ExecutionOptions
     public int TopListSize { get; init; } = 5;
 
     /// <summary>
-    /// Minimum fuzzy score before a typo can auto-resolve an entity slot. Below this the
-    /// match becomes a clarification option instead of a filled value.
-    /// </summary>
-    public double FuzzyAutoResolveMinScore { get; init; } = 0.9;
-
-    /// <summary>
     /// Minimum gap between the best and second-best fuzzy scores required to auto-resolve.
-    /// Near-ties clarify rather than guess.
+    /// Near-ties clarify rather than guess. Score floor is <see cref="TrustOptions.MinSlotConfidence"/>.
     /// </summary>
     public double FuzzyAutoResolveMinGap { get; init; } = 0.1;
 }

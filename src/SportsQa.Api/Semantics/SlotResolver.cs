@@ -174,8 +174,9 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
     }
 
     /// <summary>
-    /// Auto-resolve a typo when the best unshadowed fuzzy hit clears the score and gap
-    /// thresholds. Near-ties and weak matches stay unresolved so clarification can ask.
+    /// Auto-resolve a typo when the best unshadowed fuzzy hit clears
+    /// <see cref="TrustOptions.MinSlotConfidence"/> and the gap to #2. Near-ties and weak
+    /// matches stay unresolved so clarification can ask.
     /// </summary>
     private EntityMatch? ResolveFuzzy(string question, string? kind)
     {
@@ -190,7 +191,7 @@ public sealed class SlotResolver(SchemaCatalog catalog, DatasetFacts facts, Spor
         }
 
         var best = ranked[0];
-        if (best.Score < options.Execution.FuzzyAutoResolveMinScore)
+        if (best.Score < options.Trust.MinSlotConfidence)
         {
             return null;
         }
