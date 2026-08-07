@@ -76,7 +76,6 @@ public sealed record RefusalReason(string Code, string Message, string? WhatWoul
 public sealed record Diagnostics
 {
     public required string Intent { get; init; }
-    public required string Tier { get; init; }
     public required string Role { get; init; }
     public SqlSource? SqlSource { get; init; }
 

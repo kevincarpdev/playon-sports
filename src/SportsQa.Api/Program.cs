@@ -127,7 +127,6 @@ app.MapPost("/ask", async (
             Diagnostics = new Diagnostics
             {
                 Intent = "unknown",
-                Tier = "unknown",
                 Role = principal.Role.ToString(),
                 CorrelationId = correlationId,
             },

@@ -38,10 +38,11 @@ public sealed class QuestionPipeline(
         {
             return Refuse(request, "empty_question",
                 new RefusalReason("empty_question", "Ask a question about the data.", null),
-                "unknown", ModelTier.Lookup, principal);
+                "unknown", principal);
         }
 
-        var routing = router.Route(request.Question, principal);
+        // TODO(contract): grant is tables + maxRows + AllowOps from role; no tier ladder.
+        var routing = router.Route(principal);
 
         var interpretation = await llm.InterpretAsync(
             request.Question, semanticContext.Content, cancellationToken);
@@ -50,26 +51,15 @@ public sealed class QuestionPipeline(
 
         // Ops intents are invisible to client roles: refuse as unsupported rather than
         // forbidden, so the internal tool surface cannot be enumerated by probing.
-        if (IntentCatalog.IsOpsIntent(plan.Intent) && !routing.Grants(Capability.OpsIntents))
+        if (IntentCatalog.IsOpsIntent(plan.Intent) && !routing.AllowOps)
         {
             plan = IntentCatalog.For("unrecognised");
         }
 
         if (plan.IsRefused)
         {
-            return Refuse(request, plan.Intent, plan.Refusal!, plan.Intent, routing.Tier, principal,
+            return Refuse(request, plan.Intent, plan.Refusal!, plan.Intent, principal,
                 interpretation.Confidence);
-        }
-
-        routing = router.EscalateFor(routing, plan.RequiredCapability);
-
-        if (!routing.Grants(plan.RequiredCapability))
-        {
-            return Refuse(request, plan.Intent,
-                new RefusalReason("capability_not_granted",
-                    "That question needs a level of access this request does not have.",
-                    "A higher subscription tier."),
-                plan.Intent, routing.Tier, principal, interpretation.Confidence);
         }
 
         var slots = slotResolver.Resolve(request.Question, plan, request.Slots);
@@ -81,7 +71,7 @@ public sealed class QuestionPipeline(
                 Question = request.Question,
                 Confidence = 0,
                 Clarifications = slots.Clarifications,
-                Diagnostics = Diagnose(plan.Intent, routing, principal, interpretation, slots.Values),
+                Diagnostics = Diagnose(plan.Intent, principal, interpretation, slots.Values),
             };
         }
 
@@ -112,7 +102,7 @@ public sealed class QuestionPipeline(
                 return Refuse(request, plan.Intent,
                     new RefusalReason(verdict.Code!, verdict.Detail!,
                         "A supported question, or a corrected query."),
-                    plan.Intent, routing.Tier, principal, interpretation.Confidence);
+                    plan.Intent, principal, interpretation.Confidence);
             }
 
             query = new CertifiedQuery(interpretation.Sql!, new Dictionary<string, object?>(),
@@ -134,7 +124,7 @@ public sealed class QuestionPipeline(
         {
             return Refuse(request, plan.Intent,
                 new RefusalReason(guarded.Code!, guarded.Detail!, null),
-                plan.Intent, routing.Tier, principal, interpretation.Confidence);
+                plan.Intent, principal, interpretation.Confidence);
         }
 
         var execution = await executor.ExecuteAsync(
@@ -149,7 +139,7 @@ public sealed class QuestionPipeline(
                 new RefusalReason("query_failed",
                     "The query for that question could not be executed against this dataset.",
                     null),
-                plan.Intent, routing.Tier, principal, interpretation.Confidence);
+                plan.Intent, principal, interpretation.Confidence);
         }
 
         var result = execution.Data!;
@@ -163,7 +153,7 @@ public sealed class QuestionPipeline(
             Confidence = Score(source, evaluated),
             Answer = new AnswerPayload(result.Columns, result.Rows, result.Scalar, isTie, query.Scope),
             Caveats = evaluated,
-            Diagnostics = Diagnose(plan.Intent, routing, principal, interpretation, slots.Values)
+            Diagnostics = Diagnose(plan.Intent, principal, interpretation, slots.Values)
                 with { SqlSource = source, ModelSqlRejectedBecause = modelRejection },
         };
     }
@@ -252,7 +242,6 @@ public sealed class QuestionPipeline(
         string intent,
         RefusalReason refusal,
         string diagnosticIntent,
-        ModelTier tier,
         Principal principal,
         double modelConfidence = 0) => new()
     {
@@ -263,7 +252,6 @@ public sealed class QuestionPipeline(
         Diagnostics = new Diagnostics
         {
             Intent = diagnosticIntent,
-            Tier = tier.ToString(),
             Role = principal.Role.ToString(),
             ModelReportedConfidence = modelConfidence,
         },
@@ -271,13 +259,11 @@ public sealed class QuestionPipeline(
 
     private static Diagnostics Diagnose(
         string intent,
-        RoutingDecision routing,
         Principal principal,
         LlmInterpretation interpretation,
         Dictionary<string, string> slots) => new()
     {
         Intent = intent,
-        Tier = routing.Tier.ToString(),
         Role = principal.Role.ToString(),
         ModelReportedConfidence = interpretation.Confidence,
         ResolvedSlots = slots,

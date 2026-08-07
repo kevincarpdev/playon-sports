@@ -15,7 +15,6 @@ public sealed class SportsQaOptions
 
     public ExecutionOptions Execution { get; init; } = new();
     public TrustOptions Trust { get; init; } = new();
-    public RoutingOptions Routing { get; init; } = new();
     public AuthorizationOptions Authorization { get; init; } = new();
 }
 
@@ -55,18 +54,6 @@ public sealed class TrustOptions
     /// it at full confidence is how a NULL gets read as an answer.
     /// </summary>
     public double NoDataPenalty { get; init; } = 0.4;
-}
-
-public sealed class RoutingOptions
-{
-    /// <summary>Question length in words above which we escalate past the Lookup tier.</summary>
-    public int LookupMaxWords { get; init; } = 8;
-
-    public string[] AggregateSignals { get; init; } =
-        ["most", "top", "best", "highest", "lowest", "average", "total", "leader", "rank"];
-
-    public string[] DeepSignals { get; init; } =
-        ["beat", "versus", " vs ", "compare", "better", "both", "between", "against"];
 }
 
 public sealed class AuthorizationOptions

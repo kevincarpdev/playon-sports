@@ -45,7 +45,6 @@ public static class Report
         }
 
         Console.WriteLine($"        pipeline: intent={response.Diagnostics.Intent} " +
-                          $"tier={response.Diagnostics.Tier} " +
                           $"sql={response.Diagnostics.SqlSource?.ToString() ?? "none"}");
 
         if (golden.GroundTruthSql is not null)

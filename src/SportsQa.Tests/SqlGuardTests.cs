@@ -27,10 +27,10 @@ public sealed class SqlGuardTests
 
     /// <summary>Anonymous may read teams and games, never per-player or per-game stat lines.</summary>
     private static RoutingDecision Anonymous() =>
-        new CapabilityRouter(Options).Route("how many teams", new Principal(Role.Anonymous));
+        new CapabilityRouter(Options).Route(new Principal(Role.Anonymous));
 
     private static RoutingDecision Subscriber() =>
-        new CapabilityRouter(Options).Route("how many teams", new Principal(Role.Subscriber));
+        new CapabilityRouter(Options).Route(new Principal(Role.Subscriber));
 
     public static TheoryData<string, string> KnownBypasses() => new()
     {
